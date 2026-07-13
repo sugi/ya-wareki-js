@@ -13,7 +13,7 @@
 
 ## Global Constraints
 
-- **移植対象の状態**: wareki リポジトリの `fix/2026-07-13-review` ブランチ (起草時 HEAD cdfa641)。この計画の実行開始時に `git -C ~/works/git/github/wareki log --oneline -1` で HEAD を確認し、cdfa641 から進んでいる場合は `git -C ~/works/git/github/wareki diff cdfa641..HEAD -- lib/` を確認してコントローラが計画への影響を評価してから着手する。tools (export-data.rb / gen-golden.rb) は生成物ヘッダに `git -C ../wareki describe --always --dirty` を記録する。
+- **移植対象の状態**: wareki リポジトリの `fix/2026-07-13-review` ブランチ (起草時 HEAD cdfa641、2026-07-13 実行中に 6459443 へ再ピン: 差分は %% エスケープ処理の強化と ChangeLog のみでデータ定義は無変更)。この計画の実行開始時に `git -C ~/works/git/github/wareki log --oneline -1` で HEAD を確認し、cdfa641 から進んでいる場合は `git -C ~/works/git/github/wareki diff cdfa641..HEAD -- lib/` を確認してコントローラが計画への影響を評価してから着手する。tools (export-data.rb / gen-golden.rb) は生成物ヘッダに `git -C ../wareki describe --always --dirty` を記録する。
 
 - パッケージ名 `ya-wareki`、バージョン `0.1.0`、ライセンス **BSD-2-Clause** (移植元 wareki gem と同じ。ya-kansuji は MIT なので LICENSE を流用しないこと)、author `Tatsuki Sugiura <sugi@nemui.org>`、`engines: { "node": ">=22" }`。
 - `"type": "module"`。tsdown ビルドで dist/index.js (ESM) + index.cjs + index.d.ts + index.d.cts + index.iife.min.js (IIFE グローバル名 `YaWareki`) の5点を出す。IIFE のみ ya-kansuji をバンドルに取り込み、ESM/CJS では通常の dependency として external に保つ。tsdown.config.ts は ya-kansuji-js のパターン (outExtensions、CJS require 対策の globalThis footer) を踏襲する。exports マップは types 先頭、unpkg/jsdelivr フィールド、`sideEffects: false`、`files: ["dist","src","README.md","LICENSE"]`。

@@ -14,7 +14,7 @@
 
 ## Global Constraints
 
-- **移植対象の状態**: wareki リポジトリの `fix/2026-07-13-review` ブランチ (起草時 HEAD cdfa641)。この計画の実行開始時に `git -C ~/works/git/github/wareki log --oneline -1` で HEAD を確認し、cdfa641 から進んでいる場合は `git -C ~/works/git/github/wareki diff cdfa641..HEAD -- lib/` を確認してコントローラが計画への影響を評価してから着手する。tools (export-data.rb / gen-golden.rb) は生成物ヘッダに `git -C ../wareki describe --always --dirty` を記録する。
+- **移植対象の状態**: wareki リポジトリの `fix/2026-07-13-review` ブランチ (起草時 HEAD cdfa641、2026-07-13 実行中に 6459443 へ再ピン: 差分は %% エスケープ処理の強化と ChangeLog のみでデータ定義は無変更)。この計画の実行開始時に `git -C ~/works/git/github/wareki log --oneline -1` で HEAD を確認し、cdfa641 から進んでいる場合は `git -C ~/works/git/github/wareki diff cdfa641..HEAD -- lib/` を確認してコントローラが計画への影響を評価してから着手する。tools (export-data.rb / gen-golden.rb) は生成物ヘッダに `git -C ../wareki describe --always --dirty` を記録する。
 
 - パッケージ名 `ya-wareki`、バージョン `0.1.0`、ライセンス **BSD-2-Clause** (移植元 wareki gem と同じ。ya-kansuji は MIT なので LICENSE を流用しないこと)、author `Tatsuki Sugiura <sugi@nemui.org>`、`engines: { "node": ">=22" }`。
 - `"type": "module"`。tsdown ビルドで dist/index.js (ESM) + index.cjs + index.d.ts + index.d.cts + index.iife.min.js (IIFE グローバル名 `YaWareki`) の5点を出す。IIFE のみ ya-kansuji をバンドルに取り込み、ESM/CJS では通常の dependency として external に保つ。tsdown.config.ts は ya-kansuji-js のパターン (outExtensions、CJS require 対策の globalThis footer) を踏襲する。exports マップは types 先頭、unpkg/jsdelivr フィールド、`sideEffects: false`、`files: ["dist","src","README.md","LICENSE"]`。
@@ -327,6 +327,11 @@ git commit -m "feat: add wareki string parser with full Ruby-compatible regex"
 ---
 
 ### Task 2: format.ts と WarekiDate.format / 漢字ゲッター
+
+> **再ピン (6459443) による追加要件**: Ruby 版は `%%` エスケープを尊重するようになった (commits 43f1b2b, 6459443)。
+> `FORMAT_EXPANSION_REGEX = /(?<!%)(?:%%)*\K#{FORMAT_DIRECTIVE_REGEX}/` により、直前が奇数個の `%` である `%J...` は展開されない (例: `"%%JF"` は最終的にリテラル `"%JF"` になる)。
+> JS には `\K` がないため等価実装が必要: 例えば `/(?<!%)((?:%%)*)(%J...)/` で偶数個の `%%` プレフィックスをキャプチャして温存しつつ展開する、または先に `%%` をプレースホルダへ退避してから展開して戻す。
+> `%%` 自体の `%` への畳み込みは標準コード処理 (`%%` → `%`) の段で行う。wareki の spec/date_spec.rb に追加された 9 行のエスケープ関連ケースも全て転記すること。
 
 **推奨モデル:** Opus
 
