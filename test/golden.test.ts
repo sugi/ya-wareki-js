@@ -6,6 +6,7 @@ import { WarekiDate } from '../src/wareki-date.js'
 const rows = readFileSync('test/golden/conversions.csv', 'utf8')
   .trim()
   .split('\n')
+  .filter((l) => !l.startsWith('#'))
   .slice(1)
   .map((l) => l.split(','))
 

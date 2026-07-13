@@ -11,14 +11,19 @@ const years = JSON.parse(readFileSync(join(root, 'tools/data/year-defs.json'), '
 const eras = JSON.parse(readFileSync(join(root, 'tools/data/era-defs.json'), 'utf8'))
 
 // 生成元となった Ruby 版 wareki のリビジョンを刻印する (プロヴェナンス)。
-const warekiDir = join(root, '..', 'wareki')
-let warekiVersion = 'unknown'
-try {
-  warekiVersion = execSync(`git -C ${warekiDir} describe --always --dirty`, {
-    encoding: 'utf8',
-  }).trim()
-} catch {
-  // wareki リポジトリが手元に無い場合はスタンプを省略する
+// WAREKI_DIR で参照先を、WAREKI_PROVENANCE でスタンプ文字列を明示できる
+// (.git を持たないチェックアウト、例えば git archive で展開したタグから
+// 生成する場合など、git describe が使えないときに使う)。
+const warekiDir = process.env.WAREKI_DIR || join(root, '..', 'wareki')
+let warekiVersion = process.env.WAREKI_PROVENANCE || 'unknown'
+if (!process.env.WAREKI_PROVENANCE) {
+  try {
+    warekiVersion = execSync(`git -C ${warekiDir} describe --always --dirty`, {
+      encoding: 'utf8',
+    }).trim()
+  } catch {
+    // wareki リポジトリが手元に無い場合はスタンプを省略する
+  }
 }
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-'
@@ -49,7 +54,7 @@ for (const y of years) {
 }
 
 const yearTs = `// このファイルは tools/encode-data.mjs が生成する。手動編集禁止。
-// 生成元 wareki: ${warekiVersion} (git -C ../wareki describe --always --dirty)
+// 生成元 wareki: ${warekiVersion} (WAREKI_DIR/WAREKI_PROVENANCE、既定は git -C ../wareki describe --always --dirty)
 // 形式: 1年 = 17bit (leapMonth<<13 | 月の大小ビット) を6bit英数字3文字で符号化。
 // 詳細は tools/encode-data.mjs と実装計画 Task 3 を参照。
 export const FIRST_YEAR = ${years[0].year}
@@ -63,7 +68,7 @@ export const DAY_OVERRIDES: ReadonlyArray<readonly [number, number, number]> = $
 
 const eraLine = (t) => `  [${JSON.stringify(t[0])}, ${t[1]}, ${t[2]}, ${t[3]}],`
 const eraTs = `// このファイルは tools/encode-data.mjs が生成する。手動編集禁止。
-// 生成元 wareki: ${warekiVersion} (git -C ../wareki describe --always --dirty)
+// 生成元 wareki: ${warekiVersion} (WAREKI_DIR/WAREKI_PROVENANCE、既定は git -C ../wareki describe --always --dirty)
 // [name, year (元年の西暦年), start (JD), end (JD)]。
 // end の 9007199254740991 は Ruby 版 DAY_MAX (Bignum) の代替で、継続中の元号を表す。
 export type EraTuple = readonly [name: string, year: number, start: number, end: number]

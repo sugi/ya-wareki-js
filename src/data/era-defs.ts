@@ -1,5 +1,5 @@
 // このファイルは tools/encode-data.mjs が生成する。手動編集禁止。
-// 生成元 wareki: v1.1.0-32-g6459443-dirty (git -C ../wareki describe --always --dirty)
+// 生成元 wareki: v2.0.0 (WAREKI_DIR/WAREKI_PROVENANCE、既定は git -C ../wareki describe --always --dirty)
 // [name, year (元年の西暦年), start (JD), end (JD)]。
 // end の 9007199254740991 は Ruby 版 DAY_MAX (Bignum) の代替で、継続中の元号を表す。
 export type EraTuple = readonly [name: string, year: number, start: number, end: number]
