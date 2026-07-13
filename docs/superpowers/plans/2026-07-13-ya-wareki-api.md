@@ -14,6 +14,8 @@
 
 ## Global Constraints
 
+- **南北朝裁定 (2026-07-13 ユーザー確定)**: JD→元号解決は北朝優先 (現 master / 現行 JS 実装の挙動が正)。パースは南北両元号名を受容。review ブランチの ERA_JD_LOOKUP 由来の南朝優先の期待値をテストに持ち込まないこと。パース・フォーマッタの挙動照合は review ブランチのコード (`git -C ../wareki archive fix/2026-07-13-review | tar -x -C <tmpdir>` で展開) に対して行い、era 解決のみ現行 JS / master に合わせる。詳細は設計書「南北朝期の元号解決に関する裁定」節。
+
 - **移植対象の状態**: wareki リポジトリの `fix/2026-07-13-review` ブランチ (起草時 HEAD cdfa641、2026-07-13 実行中に 6459443 へ再ピン: 差分は %% エスケープ処理の強化と ChangeLog のみでデータ定義は無変更)。この計画の実行開始時に `git -C ~/works/git/github/wareki log --oneline -1` で HEAD を確認し、cdfa641 から進んでいる場合は `git -C ~/works/git/github/wareki diff cdfa641..HEAD -- lib/` を確認してコントローラが計画への影響を評価してから着手する。tools (export-data.rb / gen-golden.rb) は生成物ヘッダに `git -C ../wareki describe --always --dirty` を記録する。
 
 - パッケージ名 `ya-wareki`、バージョン `0.1.0`、ライセンス **BSD-2-Clause** (移植元 wareki gem と同じ。ya-kansuji は MIT なので LICENSE を流用しないこと)、author `Tatsuki Sugiura <sugi@nemui.org>`、`engines: { "node": ">=22" }`。
