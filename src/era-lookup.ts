@@ -1,6 +1,6 @@
 import {
   COMMON_ERA_START_JD, IMPERIAL_START_JD, IMPERIAL_START_YEAR, JD_MAX,
-  KANJI_VARIANTS, NORTH_COURT_ERA_NAMES, SQUARE_ERAS,
+  KANJI_VARIANTS, SQUARE_ERAS,
 } from './constants.js'
 import { ERA_NORTH_TUPLES, ERA_TUPLES, type EraTuple } from './data/era-defs.js'
 
@@ -51,34 +51,15 @@ export function eraByName(name: string): EraDef | undefined {
   return ERA_BY_NAME.get(name) ?? ERA_BY_NAME.get(SQUARE_ERAS[name] ?? normalizeKanjiVariants(name))
 }
 
-// Ruby ERA_JD_LOOKUP 相当: 北朝元号を除き、南北朝合一で継続元号となった明徳は
-// 元中の終端から充て、隣接・重複する境界は後続元号を優先するよう end を詰める。
-export const ERA_JD_LOOKUP: readonly EraDef[] = (() => {
-  const eras = ERA_DEFS.filter((e) => !NORTH_COURT_ERA_NAMES.includes(e.name)).map((e) => ({ ...e }))
-  const meitoku = eras.find((e) => e.name === '明徳')!
-  const gencyu = eras.find((e) => e.name === '元中')!
-  meitoku.start = gencyu.end
-  eras.sort((a, b) => a.start - b.start)
-  for (let i = 0; i + 1 < eras.length; i++) {
-    const a = eras[i]!
-    const b = eras[i + 1]!
-    if (a.end >= b.start) a.end = b.start - 1
-  }
-  return eras
-})()
-
-// Ruby Utils.find_era 互換: end >= jd を満たす最初の元号を二分探索し、
-// start が jd 以前でなければ undefined (元号の空白期間)。
+// Ruby Utils.find_era 互換: `ERA_DEFS.reverse_each { |e| ... return e }` の直訳。
+// 南北朝期は元号区間が重なる (元弘/正慶、南朝の延元〜元中/北朝の暦応〜康応、
+// 元中/明徳)。Ruby は ERA_DEFS の配列順で後に定義された方を優先するため、
+// ここでも配列を逆順に線形走査し最初に一致した定義を返す (南朝が常に勝つ
+// わけではない — 例えば 1340-07-26 は北朝の暦応が勝つ)。
 export function findEraByJd(jd: number): EraDef | undefined {
-  const eras = ERA_JD_LOOKUP
-  let hi = eras.length - 1
-  if (jd > (eras[hi] as EraDef).end) return undefined
-  let lo = 0
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1
-    if ((eras[mid] as EraDef).end >= jd) hi = mid
-    else lo = mid + 1
+  for (let i = ERA_DEFS.length - 1; i >= 0; i--) {
+    const e = ERA_DEFS[i] as EraDef
+    if (e.start <= jd && jd <= e.end) return e
   }
-  const era = eras[lo] as EraDef
-  return era.start <= jd ? era : undefined
+  return undefined
 }

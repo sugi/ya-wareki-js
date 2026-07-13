@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { NORTH_COURT_ERA_NAMES } from '../src/constants.js'
 import {
-  ERA_DEFS, ERA_JD_LOOKUP, ERA_NAME_KEYS, ERA_NORTH_DEFS,
+  ERA_DEFS, ERA_NAME_KEYS, ERA_NORTH_DEFS,
   eraByName, findEraByJd, normalizeKanjiVariants,
 } from '../src/era-lookup.js'
 
@@ -74,29 +73,23 @@ describe('findEraByJd (Ruby Utils.find_era)', () => {
     expect(findEraByJd(1956841)).toBeUndefined() // 大化より前
   })
 
-  it('prefers southern court eras (nanboku-cho)', () => {
-    expect(findEraByJd(2209541)!.name).toBe('延元') // 1337-06-01 (Gregorian)
-    expect(findEraByJd(2210692)!.name).toBe('興国') // 1340-07-26
-    expect(findEraByJd(2214492)!.name).toBe('正平') // 1350-12-21
-    expect(findEraByJd(2207792)!.name).toBe('元弘') // 1332-08-17
-    expect(findEraByJd(2229113)!.name).toBe('元中') // 1391-01-01
-    expect(findEraByJd(2229992)!.name).toBe('明徳') // 1393-05-29
+  it('resolves overlapping nanboku-cho era definitions by ERA_DEFS array order (Ruby reverse_each)', () => {
+    // ERA_DEFS には南北朝期の元号区間が複数重なって収録されている
+    // (元弘/正慶、南朝の延元〜元中/北朝の暦応〜康応、元中/明徳)。
+    // Ruby の find_era は配列を逆順に走査するため、南朝が常に勝つわけではなく
+    // 配列内で後に定義された方が勝つ (以下はすべて Ruby 側で直接確認済み)。
+    expect(findEraByJd(2209541)!.name).toBe('延元') // 1337-06-01 (Gregorian, 北朝元号未開始)
+    expect(findEraByJd(2210692)!.name).toBe('暦応') // 1340-07-26 (北朝が勝つ)
+    expect(findEraByJd(2214492)!.name).toBe('観応') // 1350-12-21 (北朝が勝つ)
+    expect(findEraByJd(2207792)!.name).toBe('正慶') // 1332-08-17 (正慶が元弘に勝つ)
+    expect(findEraByJd(2229113)!.name).toBe('明徳') // 1391-01-01 (明徳が元中に勝つ)
+    expect(findEraByJd(2229992)!.name).toBe('明徳') // 1393-05-29 (南北朝合一後)
   })
 })
 
-describe('ERA_JD_LOOKUP invariants (Ruby utils_spec より転記)', () => {
-  it('is sorted, disjoint and excludes north court eras', () => {
-    expect(ERA_JD_LOOKUP).toHaveLength(232)
-    for (let i = 0; i + 1 < ERA_JD_LOOKUP.length; i++) {
-      const a = ERA_JD_LOOKUP[i]!
-      const b = ERA_JD_LOOKUP[i + 1]!
-      expect(a.end < b.start && a.end < b.end, `${a.name} -> ${b.name}`).toBe(true)
-    }
-    expect(ERA_JD_LOOKUP.filter((e) => NORTH_COURT_ERA_NAMES.includes(e.name))).toHaveLength(0)
-  })
-
+describe('ERA_DEFS / ERA_NORTH_DEFS / ERA_NAME_KEYS invariants', () => {
   it('keeps ERA_DEFS/ERA_NORTH_DEFS untouched and ERA_NAME_KEYS ordered', () => {
-    expect(ERA_DEFS.find((e) => e.name === '慶応')!.end).toBe(2403629) // lookup 側だけ 2403356 に詰まる
+    expect(ERA_DEFS.find((e) => e.name === '慶応')!.end).toBe(2403629)
     expect(ERA_NORTH_DEFS.find((e) => e.name === '建武')!.end).toBe(2210046)
     expect(ERA_NAME_KEYS).toContain('')
     // Ruby: `a = b = v` は b を先に挿入するため実際の挿入順は

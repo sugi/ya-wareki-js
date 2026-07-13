@@ -49,10 +49,3 @@ export const SQUARE_ERAS: Record<string, string> = {
 
 export const NUM_CHARS =
   '零壱壹弌弐貳貮参參弎肆伍陸漆質柒捌玖〇一二三四五六七八九十拾什卄廿卅丗卌百陌佰皕阡仟千万萬億兆京垓0123456789０１２３４５６７８９'
-
-// 南北朝期に北朝でのみ使われた元号。JD からの元号解決では南朝を優先するため
-// 索引から除外する (名前からの解釈は eraByName で引き続き可能)。
-export const NORTH_COURT_ERA_NAMES: readonly string[] = [
-  '正慶', '暦応', '康永', '貞和', '観応', '文和', '延文', '康安',
-  '貞治', '応安', '永和', '康暦', '永徳', '至徳', '嘉慶', '康応',
-]
