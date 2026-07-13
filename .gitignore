@@ -4,3 +4,4 @@ dist/
 # ya-kansuji が npm 公開されるまで file: 依存でロックファイルが環境依存になるため除外する。
 # 公開後はロックファイルをコミットして CI を npm ci に戻す。
 package-lock.json
+/coverage/
