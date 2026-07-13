@@ -1,0 +1,27 @@
+name: CI
+# 注意: ya-kansuji が npm に publish されるまでこのワークフローは失敗する
+# (dependencies の "ya-kansuji": "^0.1.0" が registry に存在しないため)。
+# ya-kansuji publish 後にやること:
+#   1. package-lock.json を .gitignore から外してコミットする
+#   2. 下の npm install を npm ci に戻し、setup-node に cache: 'npm' を足す
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['22', '24']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+      - run: npx publint
+      - run: npx @arethetypeswrong/cli --pack .
