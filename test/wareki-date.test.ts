@@ -191,3 +191,37 @@ describe('with (immutable 版 setter)', () => {
     expect(d.jd).toBe(2168323) // 元仁元年7月1日 (非閏)。Ruby で検証済み
   })
 })
+
+describe('Object.freeze runtime immutability', () => {
+  it('is frozen after construction', () => {
+    const d = new WarekiDate('令和', 1, 1, 1)
+    expect(Object.isFrozen(d)).toBe(true)
+  })
+
+  it('rejects property assignment with TypeError (strict mode)', () => {
+    const d = new WarekiDate('平成', 27, 8, 16)
+    expect(() => {
+      (d as any).day = 2
+    }).toThrow(TypeError)
+  })
+
+  it('remains consistent after accessing jd and attempted assignment', () => {
+    const d = new WarekiDate('令和', 2, 5, 4)
+    const originalDay = d.day
+    const originalGregorian = d.toGregorianParts()
+    const jdValue = d.jd // trigger caching in #jd
+
+    expect(() => {
+      (d as any).day = 999
+    }).toThrow(TypeError)
+
+    expect(d.day).toBe(originalDay)
+    expect(d.toGregorianParts()).toEqual(originalGregorian)
+  })
+
+  it('allows internal #jd assignment via fromJd', () => {
+    const jd = 2457251 // 平成27年8月16日
+    const d = WarekiDate.fromJd(jd)
+    expect(d.jd).toBe(jd)
+  })
+})

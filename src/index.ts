@@ -23,9 +23,11 @@ export function parse(str: string): WarekiDate {
 // 再 raise し、素の ArgumentError と UnsupportedDateRange のみフォールバックする
 // (common.rb の rescue InvalidDate; raise / rescue ArgumentError, UnsupportedDateRange
 // 相当)。WarekiInvalidDateError はその区別のため他の分岐より先に rethrow する。
-// 正規化後の文字列に含まれる最初の "HH:MM(:SS)" 時刻を取り出す。normalizeTime は
-// 漢数字時刻を必ずゼロ埋め2桁の ASCII 表記へ落とすため、この単純な正規表現で拾える。
-const TIME_OF_DAY_REGEX = /(\d{1,2}):(\d{2})(?::(\d{2}))?/
+// 正規化後の文字列に含まれる最初の "HH:MM(:SS)" 時刻を取り出す。数字境界
+// (?<!\d) / (?!\d) で桁の連続全体を1成分として捕捉し、範囲外時刻 (3桁以上、
+// 例: 百時 -> '100:00') が短い部分文字列 ('00:00' 等) に部分一致して誤って
+// 正常値扱いされないようにする。Ruby Time.parse の実測受理/拒否と一致させている。
+const TIME_OF_DAY_REGEX = /(?<!\d)(\d+):(\d+)(?::(\d+))?(?!\d)/
 
 interface TimeOfDay {
   hour: number

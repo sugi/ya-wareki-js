@@ -24,6 +24,9 @@ export class WarekiDate {
     this.isLeapMonth = isLeapMonth
     this.year = eraYearToCivil(this.eraName, eraYear)
     this.#validate()
+    // プライベートフィールド #jd はプロパティ記述子を持たないため freeze の影響を受けず、
+    // freeze 後も内部から代入可能。jd getter のキャッシュ書き込みと fromJd の #jd 設定が機能する。
+    Object.freeze(this)
   }
 
   static parse(str: string): WarekiDate {
