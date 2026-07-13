@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   GREGORIAN_REFORM_JD, UnsupportedDateRangeError, VERSION, WarekiDate, WarekiInvalidDateError,
-  WarekiParseError, format, parse, parseToDate, toWarekiDate,
+  WarekiParseError, format, normalizeTime, parse, parseToDate, toWarekiDate,
 } from '../src/index.js'
+
+const ymdhms = (d: Date): string => {
+  const p = (n: number): string => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ` +
+    `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+}
 
 describe('top-level API', () => {
   it('parse() delegates to WarekiDate.parse', () => {
@@ -72,5 +78,119 @@ describe('parseToDate (Ruby wareki_spec より転記)', () => {
     expect(parseToDate('2020-01-02').toISOString().startsWith('2020-01-02')).toBe(true)
     expect(() => parseToDate('全く日付でない')).toThrow(WarekiParseError)
     expect(() => parseToDate('全く日付でない')).not.toThrow(WarekiInvalidDateError)
+  })
+})
+
+describe('parseToDate with kansuji time (Ruby std_ext_spec Time.parse cases 転記)', () => {
+  it.each<[string, string]>([
+    ['平成元年五月四日十二時三十四分五十六秒', '1989-05-04 12:34:56'],
+    ['平成元年5月4日 午後三時', '1989-05-04 15:00:00'],
+    ['令和三年一月一日 零時五分', '2021-01-01 00:05:00'],
+    ['㍻一〇年 肆月 晦日 正午', '1998-04-30 12:00:00'],
+  ])('parseToDate(%s) -> %s (local)', (input, expected) => {
+    expect(ymdhms(parseToDate(input))).toBe(expected)
+  })
+
+  it('sets local time when a wareki date is followed by kansuji time', () => {
+    const d = parseToDate('平成元年五月四日十二時三十四分')
+    expect(ymdhms(d)).toBe('1989-05-04 12:34:00')
+  })
+
+  it('rejects out-of-range kansuji times like their ascii equivalents (Ruby: ArgumentError)', () => {
+    // 二十五時 -> 25:00 (hour>24), 十二時七十分 -> 12:70 (min>59)
+    expect(() => parseToDate('平成元年5月4日 二十五時')).toThrow(WarekiParseError)
+    expect(() => parseToDate('十二時七十分')).toThrow(WarekiParseError)
+    // 12時34分 -> 12:34 だが日付が無く new Date('12:34') も Invalid のため throw
+    // (Ruby: Date.parse('12時34分') -> ArgumentError)
+    expect(() => parseToDate('12時34分')).toThrow(WarekiParseError)
+  })
+})
+
+describe('parseToDate only time-scans strings matching TIME_PARSE_QUICK_FILTER (時|正午)', () => {
+  it('leaves a plain date-only string unaffected', () => {
+    const d = parseToDate('2020-01-02')
+    expect(d).toBeInstanceOf(Date)
+    expect(d.toISOString().startsWith('2020-01-02')).toBe(true)
+  })
+
+  it('does not time-scan an HH:MM-looking substring when 時/正午 is absent (pre-sync fallback behavior)', () => {
+    // '25:00' という部分文字列はあるが 時/正午 を含まないため、Ruby と同様
+    // 和暦の時刻抽出は一切走らない。和暦としても解釈できず、フォールバックの
+    // new Date() も Invalid になるため、元の (時刻範囲エラーではない) 解析エラーを再 throw する。
+    expect(() => parseToDate('2020-01-02T25:00')).toThrow(WarekiParseError)
+    try {
+      parseToDate('2020-01-02T25:00')
+      throw new Error('unreachable')
+    } catch (e) {
+      expect(e).toBeInstanceOf(WarekiParseError)
+      expect(e).not.toBeInstanceOf(WarekiInvalidDateError)
+      expect((e as Error).message).not.toMatch(/invalid time out of range/)
+    }
+  })
+
+  it('still rejects 二十五時 alone as an out-of-range time (時 present -> quick filter passes)', () => {
+    expect(() => parseToDate('二十五時')).toThrow(WarekiParseError)
+    try {
+      parseToDate('二十五時')
+      throw new Error('unreachable')
+    } catch (e) {
+      expect((e as Error).message).toMatch(/invalid time out of range/)
+    }
+  })
+})
+
+describe('parse / WarekiDate.parse ignore a trailing time (Ruby: Date.parse は日付のみ)', () => {
+  it('returns the date only when a time notation follows', () => {
+    expect(parse('平成三十一年四月三十日 午後十一時五十九分').format('%JF')).toBe('平成三十一年四月三十日')
+    expect(WarekiDate.parse('平成元年五月四日 午後十一時五十九分').format('%JF')).toBe('平成元年五月四日')
+  })
+})
+
+describe('format(Date, fmt) expands %JT then %J (Ruby std_ext_spec Time#strftime 転記)', () => {
+  const t = new Date(2019, 4, 4, 13, 45, 6) // 令和元年五月四日 13:45:06 (local)
+
+  it.each<[string, string]>([
+    ['%JF %JTF', '令和元年五月四日 十三時四十五分六秒'],
+    ['%JTf', '13時45分06秒'],
+    ['%JTHk時%JTMk分', '十三時四十五分'],
+    ['x%%JTF', 'x%JTF'], // 時刻展開なし→日付側 strftime が %%→% を畳む
+    ['x%%JF', 'x%JF'],
+  ])('format(Date, %s) -> %s', (fmt, expected) => {
+    expect(format(t, fmt)).toBe(expected)
+  })
+
+  it('keeps %JT literal on WarekiDate input (Ruby: Date は時刻を持たない)', () => {
+    expect(new WarekiDate('令和', 1, 5, 4).format('%JTF')).toBe('%JTF')
+    expect(format(new WarekiDate('令和', 1, 5, 4), '%JTF')).toBe('%JTF')
+  })
+
+  it('expands %JT even for pre-era times but raises on %J date directives', () => {
+    // Ruby: Time.new(100,1,2,3,4,5).strftime('%JTF') -> '三時四分五秒'; '%JF' -> UnsupportedDateRange
+    const d = new Date(0)
+    d.setFullYear(100, 0, 2)
+    d.setHours(3, 4, 5, 0)
+    expect(format(d, '%JTF')).toBe('三時四分五秒')
+    expect(() => format(d, '%JF')).toThrow(UnsupportedDateRangeError)
+  })
+
+  it('does not convert to a wareki date when no real %J date directive remains after %JT expansion', () => {
+    // Ruby: Time.new(100,1,2,3,4,5).strftime('%JTf %%') -> '03時04分05秒 %'
+    // (wareki_directive? が false のため to_wareki_date を呼ばず、era 対象外でも例外にしない)
+    const d = new Date(0)
+    d.setFullYear(100, 0, 2)
+    d.setHours(3, 4, 5, 0)
+    expect(format(d, '%JTf %%')).toBe('03時04分05秒 %')
+    // %H は自前 strftime 実装の対象外コードなのでリテラルのまま残る
+    expect(format(d, '%JTf %H')).toBe('03時04分05秒 %H')
+    // 通常の対象年でも、実ディレクティブが無ければ %% だけ畳まれる
+    expect(format(new Date(2019, 4, 4), 'x%%')).toBe('x%')
+    // 一方、実ディレクティブが残る場合は従来通り era 変換を経由し、対象外の年なら throw する
+    expect(() => format(d, '%JF')).toThrow(UnsupportedDateRangeError)
+  })
+})
+
+describe('normalizeTime is exported from index', () => {
+  it('round-trips a kansuji time', () => {
+    expect(normalizeTime('午後三時半')).toBe('15:30')
   })
 })
