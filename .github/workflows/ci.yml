@@ -1,9 +1,10 @@
 name: CI
-# 注意: ya-kansuji が npm に publish されるまでこのワークフローは失敗する
-# (dependencies の "ya-kansuji": "^0.1.0" が registry に存在しないため)。
+# ya-kansuji は npm 未公開のため、GitHub の sugi/ya-kansuji-js をチェックアウトして
+# ビルドし、ローカル依存としてインストールする。
 # ya-kansuji publish 後にやること:
-#   1. package-lock.json を .gitignore から外してコミットする
-#   2. 下の npm install を npm ci に戻し、setup-node に cache: 'npm' を足す
+#   1. 下の「ya-kansuji from GitHub」2ステップを削除し、npm install を素の
+#      `npm install` (または lockfile コミット後は `npm ci` + cache: 'npm') に戻す
+#   2. package-lock.json を .gitignore から外してコミットする
 on:
   push:
     branches: [master]
@@ -16,12 +17,30 @@ jobs:
         node-version: ['22', '24']
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: sugi/ya-kansuji-js
+          path: .deps/ya-kansuji-js
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm install
+      - name: Build ya-kansuji from GitHub
+        run: |
+          cd .deps/ya-kansuji-js
+          npm ci
+          npm run build
+      - name: Install with local ya-kansuji
+        run: npm install ./.deps/ya-kansuji-js
       - run: npm run typecheck
       - run: npm run build
-      - run: npm test
+      - name: Test with coverage
+        run: |
+          npm run test:coverage | tee /tmp/vitest-coverage.out
+          {
+            echo "### Coverage (Node ${{ matrix.node-version }})"
+            echo '```'
+            sed -n '/% Coverage report/,$p' /tmp/vitest-coverage.out
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - run: npx publint
       - run: npx @arethetypeswrong/cli --pack .

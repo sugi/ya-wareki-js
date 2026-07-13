@@ -46,7 +46,8 @@
     "build": "tsdown",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build && npm test && npx publint && npx @arethetypeswrong/cli --pack ."
+    "prepublishOnly": "npm run build && npm test && npx publint && npx @arethetypeswrong/cli --pack .",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "ya-kansuji": "^0.1.0"
@@ -54,9 +55,18 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@types/node": "^22.20.1",
+    "@vitest/coverage-v8": "^3.2.7",
     "publint": "^0.3.21",
     "tsdown": "^0.22.7",
     "typescript": "^5.8.0",
     "vitest": "^3.0.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sugi/ya-wareki-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sugi/ya-wareki-js/issues"
+  },
+  "homepage": "https://github.com/sugi/ya-wareki-js#readme"
 }
