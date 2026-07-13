@@ -6,10 +6,11 @@
    本パッケージの CI と install は ya-kansuji が registry に存在することが前提 (それまで CI は赤)。
    publish 前に ya-kansuji-js の README「既知の非互換」節を確認する。Ruby 側 ya_kansuji の fix/js-port-findings ブランチ (`"` 受容バグと to_kan 検証の修正) がマージ・リリース済みなら記述を更新する。
 2. **データとゴールデンの再生成** (クリーンな状態で)。
-   wareki リポジトリを clean な `fix/north-court-era-priority` (またはそれを取り込んだリリース) にチェックアウトし、
+   北朝優先 (PR #24) は wareki の `origin/master` にマージ済みなので、専用ブランチのチェックアウトは不要。
+   clean な `origin/master` (またはそれを取り込んだリリースタグ) で
    `tools/export-data.rb` → `node tools/encode-data.mjs` → `tools/gen-golden.rb` を再実行する。
    gen-golden.rb に provenance スタンプ出力を追加してから行う (現状 CSV にスタンプがない)。
-   スタンプ行以外に diff が出ないことを確認してコミットする (現行データは `v1.1.0-32-g6459443-dirty` スタンプだが内容は a37fe90 と一致検証済み)。
+   スタンプ行以外に diff が出ないことを確認してコミットする。
 3. **GitHub リポジトリ作成後**: package.json に `repository` / `bugs` / `homepage` を追加する (`npm publish --provenance` の必須条件)。
 4. **lockfile 復帰**: `.gitignore` から package-lock.json を外し、registry の ya-kansuji で `npm install` し直して lockfile をコミット。CI を `npm ci` + `cache: 'npm'` に切り替える (手順は ci.yml のコメントに記載済み)。
 5. `npm publish` (prepublishOnly が build/test/publint/attw を再実行する)。リポジトリ公開後は `--provenance` を検討。v0.1.0 タグを打ち、main の CI が緑になることを確認する。

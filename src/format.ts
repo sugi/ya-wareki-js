@@ -6,13 +6,28 @@ import type { WarekiDate } from './wareki-date.js'
 
 // Ruby: FORMAT_DIRECTIVE_REGEX = /%J(-|[_0]{0,2}[0-9]*|)([fFyYegGoOiImMsSlLdD][kK]?)/
 // Ruby: FORMAT_EXPANSION_REGEX  = /(?<!%)(?:%%)*\K#{FORMAT_DIRECTIVE_REGEX}/
-// JS には \K が無いため、直前の偶数個の %% プレフィックスをキャプチャで温存する。
-// これにより奇数個の % が直前にある %J... はエスケープされ展開されない。
-const EXPANSION_REGEX = /(?<!%)((?:%%)*)%J(-|[_0]{0,2}[0-9]*|)([fFyYegGoOiImMsSlLdD][kK]?)/g
+// 日付ディレクティブのキー部。%JT... の時刻ディレクティブとは素で排他 (T を含まない)。
+const DATE_KEY_PART = '[fFyYegGoOiImMsSlLdD][kK]?'
+
+// Ruby の (?<!%)(?:%%)*\K#{DIRECTIVE} 相当のエスケープ機構。JS には \K が無いため、
+// 直前の偶数個の %% プレフィックスをキャプチャ (esc) で温存する。これにより奇数個の
+// % が直前にある %J... はエスケープされ展開されない。keyPart は展開対象のキー部
+// (日付側・時刻側で使い回す)。resolve が undefined を返したディレクティブは原文のまま残す。
+export function expandJDirectives(
+  fmt: string,
+  keyPart: string,
+  resolve: (key: string, opt: string) => string | undefined,
+): string {
+  const re = new RegExp(`(?<!%)((?:%%)*)%J(-|[_0]{0,2}[0-9]*|)(${keyPart})`, 'g')
+  return fmt.replace(re, (_whole, esc: string, opt: string, key: string) => {
+    const out = resolve(key, opt)
+    return out === undefined ? `${esc}%J${opt}${key}` : `${esc}${out}`
+  })
+}
 
 // Ruby Date#_number_format 相当: フラグ文字列を sprintf 風の spec に解決し、
 // spec の先頭が '0' なら 0 埋め、それ以外は空白埋めとして解釈する。
-function fmtNum(n: number, opt: string): string {
+export function fmtNum(n: number, opt: string): string {
   let spec: string
   if (opt === '' || opt === '0' || opt === '_0') spec = '02'
   else if (opt === '-') spec = ''
@@ -98,11 +113,7 @@ function stdStrftime(d: WarekiDate, str: string): string {
 }
 
 export function formatWareki(d: WarekiDate, fmt: string): string {
-  // esc は直前の偶数個の %% (\K 相当で温存する)。opt/key は %J ディレクティブ本体。
-  const expanded = fmt.replace(EXPANSION_REGEX, (_whole, esc: string, opt: string, key: string) => {
-    const out = formatKey(d, key, opt)
-    return out === undefined ? `${esc}%J${opt}${key}` : `${esc}${out}`
-  })
+  const expanded = expandJDirectives(fmt, DATE_KEY_PART, (key, opt) => formatKey(d, key, opt))
   // Ruby: expand 後に % が残らなければ strftime 委譲もしない
   if (!expanded.includes('%')) return expanded
   return stdStrftime(d, expanded)
