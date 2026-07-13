@@ -13,7 +13,7 @@
    スタンプ行以外に diff が出ないことを確認してコミットする。
 3. **GitHub リポジトリ作成後**: package.json に `repository` / `bugs` / `homepage` を追加する (`npm publish --provenance` の必須条件)。
 4. **lockfile 復帰**: `.gitignore` から package-lock.json を外し、registry の ya-kansuji で `npm install` し直して lockfile をコミット。CI を `npm ci` + `cache: 'npm'` に切り替える (手順は ci.yml のコメントに記載済み)。
-5. `npm publish` (prepublishOnly が build/test/publint/attw を再実行する)。リポジトリ公開後は `--provenance` を検討。v0.1.0 タグを打ち、main の CI が緑になることを確認する。
+5. `npm publish` (prepublishOnly が build/test/publint/attw を再実行する)。リポジトリ公開後は `--provenance` を検討。v0.1.0 タグを打ち、master の CI が緑になることを確認する。
 
 ## 残っている軽微な改善候補 (任意)
 
