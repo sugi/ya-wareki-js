@@ -39,8 +39,17 @@ describe('eraByName', () => {
 describe('normalizeKanjiVariants', () => {
   it('maps old glyphs to canonical ones', () => {
     expect(normalizeKanjiVariants('應德')).toBe('応徳')
-    expect(normalizeKanjiVariants('神亀')).toBe('神亀')
     expect(normalizeKanjiVariants('平成')).toBe('平成')
+  })
+
+  it('CJK互換漢字 (CJK Compatibility Ideographs) の異体字を正準字体へ正規化する', () => {
+    // \uXXXX エスケープ必須: 実体の互換漢字はエディタ・転記時に NFC 正規化で
+    // 通常字へ潰れてしまう (constants.ts の KANJI_VARIANTS と同じ注意点)。
+    expect(normalizeKanjiVariants('\uFA19亀')).toBe('神亀')
+    expect(normalizeKanjiVariants('\uFA1A')).toBe('祥')
+    expect(normalizeKanjiVariants('\uFA1B')).toBe('福')
+    expect(normalizeKanjiVariants('\uFA53')).toBe('禎')
+    expect(normalizeKanjiVariants('\uF9A8')).toBe('令')
   })
 })
 
