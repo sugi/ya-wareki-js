@@ -30,7 +30,11 @@ jobs:
           npm ci
           npm run build
       - name: Install with local ya-kansuji
-        run: npm install ./.deps/ya-kansuji-js
+        # npm install <dir> は package.json を file: 依存に書き換えるため、
+        # node_modules 構築後に元へ戻す (publint は package.json を検査する)
+        run: |
+          npm install ./.deps/ya-kansuji-js
+          git restore package.json
       - run: npm run typecheck
       - run: npm run build
       - name: Test with coverage
