@@ -12,13 +12,27 @@ const DATE_KEY_PART = '[fFyYegGoOiImMsSlLdD][kK]?'
 // Ruby の (?<!%)(?:%%)*\K#{DIRECTIVE} 相当のエスケープ機構。JS には \K が無いため、
 // 直前の偶数個の %% プレフィックスをキャプチャ (esc) で温存する。これにより奇数個の
 // % が直前にある %J... はエスケープされ展開されない。keyPart は展開対象のキー部
-// (日付側・時刻側で使い回す)。resolve が undefined を返したディレクティブは原文のまま残す。
+// (日付側・時刻側で使い回す)。
+const directiveSource = (keyPart: string): string =>
+  `(?<!%)((?:%%)*)%J(-|[_0]{0,2}[0-9]*|)(${keyPart})`
+
+// keyPart は DATE_KEY_PART / TIME_KEY_PART の2種のみなので、コンパイル済み正規表現を
+// 使い回す。g フラグ付きでも String#replace は開始時に lastIndex を 0 に戻すため
+// (RegExp.prototype[Symbol.replace] の仕様)、インスタンス共有で状態は漏れない。
+const directiveRegexCache = new Map<string, RegExp>()
+
+// resolve が undefined を返したディレクティブは原文のまま残す。
 export function expandJDirectives(
   fmt: string,
   keyPart: string,
   resolve: (key: string, opt: string) => string | undefined,
 ): string {
-  const re = new RegExp(`(?<!%)((?:%%)*)%J(-|[_0]{0,2}[0-9]*|)(${keyPart})`, 'g')
+  if (!fmt.includes('%J')) return fmt
+  let re = directiveRegexCache.get(keyPart)
+  if (!re) {
+    re = new RegExp(directiveSource(keyPart), 'g')
+    directiveRegexCache.set(keyPart, re)
+  }
   return fmt.replace(re, (_whole, esc: string, opt: string, key: string) => {
     const out = resolve(key, opt)
     return out === undefined ? `${esc}%J${opt}${key}` : `${esc}${out}`
@@ -27,15 +41,11 @@ export function expandJDirectives(
 
 // Ruby StdExt.wareki_directive? (format =~ FORMAT_EXPANSION_REGEX) 相当。
 // エスケープされた %%JF のような箇所は本物のディレクティブとして数えない。
-// expandJDirectives と同じ正規表現・エスケープ規則を resolve 経由で再利用する
-// (別の正規表現を書き起こすと escape 判定がずれる恐れがあるため)。
+// directiveSource を共有して escape 判定のずれを防ぐ。g なし (test で lastIndex が進まない)。
+const DATE_DIRECTIVE_REGEX = new RegExp(directiveSource(DATE_KEY_PART))
+
 export function hasJDateDirective(fmt: string): boolean {
-  let found = false
-  expandJDirectives(fmt, DATE_KEY_PART, () => {
-    found = true
-    return undefined
-  })
-  return found
+  return DATE_DIRECTIVE_REGEX.test(fmt)
 }
 
 // Ruby Date#_number_format 相当: フラグ文字列を sprintf 風の spec に解決し、
