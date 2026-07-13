@@ -13,7 +13,7 @@
 
 ## Global Constraints
 
-- **移植対象の状態**: wareki リポジトリの `fix/2026-07-13-review` ブランチ (起草時 HEAD cdfa641)。この計画の実行開始時に `git -C ~/works/git/github/wareki log --oneline -1` で HEAD を確認し、cdfa641 から進んでいる場合は `git -C ~/works/git/github/wareki diff cdfa641..HEAD -- lib/` を確認してコントローラが計画への影響を評価してから着手する。tools (export-data.rb / gen-golden.rb) は生成物ヘッダに `git -C ../wareki describe --always --dirty` を記録する。
+- **移植対象の状態**: wareki リポジトリの `fix/2026-07-13-review` ブランチ (起草時 HEAD cdfa641、2026-07-13 実行中に 6459443 へ再ピン: 差分は %% エスケープ処理の強化と ChangeLog のみでデータ定義は無変更)。この計画の実行開始時に `git -C ~/works/git/github/wareki log --oneline -1` で HEAD を確認し、cdfa641 から進んでいる場合は `git -C ~/works/git/github/wareki diff cdfa641..HEAD -- lib/` を確認してコントローラが計画への影響を評価してから着手する。tools (export-data.rb / gen-golden.rb) は生成物ヘッダに `git -C ../wareki describe --always --dirty` を記録する。
 
 - パッケージ名 `ya-wareki`、バージョン `0.1.0`、ライセンス **BSD-2-Clause** (移植元 wareki gem と同じ。ya-kansuji は MIT なので LICENSE を流用しないこと)、author `Tatsuki Sugiura <sugi@nemui.org>`、`engines: { "node": ">=22" }`。
 - `"type": "module"`。tsdown ビルドで dist/index.js (ESM) + index.cjs + index.d.ts + index.d.cts + index.iife.min.js (IIFE グローバル名 `YaWareki`) の5点を出す。IIFE のみ ya-kansuji をバンドルに取り込み、ESM/CJS では通常の dependency として external に保つ。tsdown.config.ts は ya-kansuji-js のパターン (outExtensions、CJS require 対策の globalThis footer) を踏襲する。exports マップは types 先頭、unpkg/jsdelivr フィールド、`sideEffects: false`、`files: ["dist","src","README.md","LICENSE"]`。
@@ -930,7 +930,7 @@ git commit -m "feat: add data pipeline with packed lunisolar year table"
 **Interfaces:**
 - Consumes: Task 2 の constants/errors/jd、Task 3 の `ERA_TUPLES` / `ERA_NORTH_TUPLES` / `yearByNum` / `findYearByJd`、ya-kansuji の `toNumber`
 - Produces:
-  - `era-lookup.ts`: `interface EraDef { name: string; year: number; start: number; end: number }`, `ERA_DEFS: readonly EraDef[]`, `ERA_NORTH_DEFS: readonly EraDef[]`, `ERA_NAME_KEYS: readonly string[]` (ERA_BY_NAME のキー、挿入順、'' を含む — Plan 2 のパーサが正規表現構築に使う), `ERA_JD_LOOKUP: readonly EraDef[]`, `normalizeKanjiVariants(str: string): string`, `eraByName(name: string): EraDef | undefined`, `findEraByJd(jd: number): EraDef | undefined`
+  - `era-lookup.ts`: `interface EraDef { name: string; year: number; start: number; end: number }`, `ERA_DEFS: readonly EraDef[]`, `ERA_NORTH_DEFS: readonly EraDef[]`, `ERA_NAME_KEYS: readonly string[]` (ERA_BY_NAME のキー、挿入順、'' を含む — Plan 2 のパーサが正規表現構築に使う), `ERA_JD_LOOKUP (superseded: Task 6 のゴールデンテストでこの事前計算方式の南朝優先仮定が Ruby と不一致と判明し、Ruby find_era 忠実な逆順線形走査に置換済み — このスニペットを再利用しないこと): readonly EraDef[]`, `normalizeKanjiVariants(str: string): string`, `eraByName(name: string): EraDef | undefined`, `findEraByJd(jd: number): EraDef | undefined`
   - `utils.ts`: `lastDayOfMonth(year, month, isLeap): number`, `lastDayOfEraMonth(eraName: string | null | undefined, civilYear, month, isLeap): number`, `eraYearToCivil(eraName: string | null | undefined, eraYear): number`, `civilToEraYear(eraName: string | null | undefined, year): number`, `altMonthNameToNumber(name: string): number | undefined`, `altMonthName(month: number): string`, `findDateParts(jd: number): { year: number; month: number; day: number; isLeapMonth: boolean }`, `i2z(num: number): string`, `k2i(str: string): number`
 
 - [ ] **Step 1: 失敗するテストを書く (test/era-lookup.test.ts)**

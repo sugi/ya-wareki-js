@@ -1,0 +1,62 @@
+{
+  "name": "ya-wareki",
+  "version": "0.1.0",
+  "description": "Yet another Japanese calendar (wareki) library — parses and formats Japanese era dates including the pre-1873 lunisolar calendar",
+  "keywords": [
+    "wareki",
+    "japanese",
+    "calendar",
+    "era",
+    "和暦",
+    "旧暦",
+    "元号",
+    "皇紀"
+  ],
+  "license": "BSD-2-Clause",
+  "author": "Tatsuki Sugiura <sugi@nemui.org>",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/index.iife.min.js",
+  "jsdelivr": "./dist/index.iife.min.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm test && npx publint && npx @arethetypeswrong/cli --pack ."
+  },
+  "dependencies": {
+    "ya-kansuji": "^0.1.0"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@types/node": "^22.20.1",
+    "publint": "^0.3.21",
+    "tsdown": "^0.22.7",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  }
+}
