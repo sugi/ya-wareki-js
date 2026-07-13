@@ -25,6 +25,13 @@
    ```sh
    WAREKI_DIR=../wareki ruby tools/gen-golden.rb
    ```
+   Ruby版の`feat/packed-calendar-def`以降にあるビットパック済み旧暦テーブルを
+   個別に比較する場合は、元号データの差分に影響されない専用ゴールデンを生成する。
+   この生成には`ya_kansuji` gemは不要。
+   ```sh
+   WAREKI_DIR=../wareki/.claude/worktrees/feat+packed-calendar-def \
+     ruby tools/gen-packed-calendar-golden.rb
+   ```
 4. ~~**GitHub リポジトリ作成後**: package.json に `repository` / `bugs` / `homepage` を追加する~~ (済 2026-07-13: 両リポジトリ作成・push 済み、フィールド追加済み。CI は sibling checkout で緑)。
 5. **lockfile復帰**: `.gitignore`からpackage-lock.jsonを外し、registryのya-kansujiで`npm install`し直してlockfileをコミット。CIを`npm ci` + `cache: 'npm'`に切り替える (手順はci.ymlのコメントに記載済み)。
 6. `npm publish` (prepublishOnly が build/test/publint/attw を再実行する)。リポジトリ公開後は `--provenance` を検討。v0.1.0 タグを打ち、master の CI が緑になることを確認する。
