@@ -5,7 +5,12 @@ import { formatWareki } from './format.js'
 import { gregorianToJd, italyToJd, jdToGregorian, jdToJulian } from './jd.js'
 import { parseFields } from './parse.js'
 import { eraYearToCivil, findDateParts, lastDayOfEraMonth } from './utils.js'
-import { yearByNum } from './year-data.js'
+import {
+  yearDataIndex,
+  yearLeapMonth,
+  yearMonthDays,
+  yearMonthStart,
+} from './year-data.js'
 
 export class WarekiDate {
   readonly eraName: string
@@ -67,12 +72,10 @@ export class WarekiDate {
   }
 
   // Ruby Date#month_index: YEAR_DEFS の monthStarts / monthDays に対する添字
-  #monthIndex(): number {
+  #monthIndex(leapMonth: number | null): number {
     if (WESTERN_ERA_NAMES.includes(this.eraName) || this.year >= GREGORIAN_START_YEAR) return this.month - 1
-    const yobj = yearByNum(this.year)
-    if (!yobj) throw new UnsupportedDateRangeError(`Cannot get year info of ${this.inspect()}`)
     let idx = this.month - 1
-    if (this.isLeapMonth || (yobj.leapMonth !== null && this.month > yobj.leapMonth)) idx += 1
+    if (this.isLeapMonth || (leapMonth !== null && this.month > leapMonth)) idx += 1
     return idx
   }
 
@@ -84,11 +87,13 @@ export class WarekiDate {
       throw new WarekiInvalidDateError(`invalid date (day out of range): ${this.inspect()}`)
     if (!WESTERN_ERA_NAMES.includes(this.eraName) && this.year < GREGORIAN_START_YEAR) {
       // 暦テーブル外の年は Ruby 同様、jd 変換時の UnsupportedDateRangeError に委ねる
-      const yobj = yearByNum(this.year)
-      if (!yobj) return
-      if (this.isLeapMonth && yobj.leapMonth !== this.month)
+      const yearIndex = yearDataIndex(this.year)
+      if (yearIndex === undefined) return
+      const leapMonth = yearLeapMonth(yearIndex)
+      if (this.isLeapMonth && leapMonth !== this.month)
         throw new WarekiInvalidDateError(`invalid date (no leap month): ${this.inspect()}`)
-      if (this.day > (yobj.monthDays[this.#monthIndex()] as number))
+      const lastDay = yearMonthDays(yearIndex, this.#monthIndex(leapMonth))
+      if (lastDay === undefined || this.day > lastDay)
         throw new WarekiInvalidDateError(`invalid date (day out of range): ${this.inspect()}`)
     } else {
       if (this.isLeapMonth)
@@ -108,9 +113,10 @@ export class WarekiDate {
       return (this.#jd = italyToJd(this.year, this.month, this.day))
     if (this.year >= GREGORIAN_START_YEAR)
       return (this.#jd = gregorianToJd(this.year, this.month, this.day))
-    const yobj = yearByNum(this.year)
-    if (!yobj) throw new UnsupportedDateRangeError(`Cannot convert to jd ${this.inspect()}`)
-    return (this.#jd = (yobj.monthStarts[this.#monthIndex()] as number) + this.day - 1)
+    const yearIndex = yearDataIndex(this.year)
+    if (yearIndex === undefined) throw new UnsupportedDateRangeError(`Cannot convert to jd ${this.inspect()}`)
+    const leapMonth = yearLeapMonth(yearIndex)
+    return (this.#jd = yearMonthStart(yearIndex, this.#monthIndex(leapMonth)) + this.day - 1)
   }
 
   toGregorianParts(): { year: number; month: number; day: number } {

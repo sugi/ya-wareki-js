@@ -6,7 +6,15 @@ import {
 import { UnsupportedDateRangeError, WarekiParseError } from './errors.js'
 import { eraByName } from './era-lookup.js'
 import { jdToGregorian } from './jd.js'
-import { findYearByJd, yearByNum } from './year-data.js'
+import {
+  findYearIndexByJd,
+  yearDataIndex,
+  yearLeapMonth,
+  yearMonthCount,
+  yearMonthDays,
+  yearMonthStart,
+  yearNum,
+} from './year-data.js'
 
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const
 
@@ -24,13 +32,14 @@ function julianLastDay(year: number, month: number): number {
 
 export function lastDayOfMonth(year: number, month: number, isLeap: boolean): number {
   if (year >= GREGORIAN_START_YEAR) return gregorianLastDay(year, month)
-  const yobj = yearByNum(year)
-  if (!yobj) throw new UnsupportedDateRangeError(`Cannot find year ${year}`)
+  const yearIndex = yearDataIndex(year)
+  if (yearIndex === undefined) throw new UnsupportedDateRangeError(`Cannot find year ${year}`)
+  const leapMonth = yearLeapMonth(yearIndex)
   let monthIdx = month - 1
-  if (isLeap || (yobj.leapMonth !== null && yobj.leapMonth < month)) monthIdx += 1
+  if (isLeap || (leapMonth !== null && leapMonth < month)) monthIdx += 1
   // 存在しない添字 (12ヶ月年の閏12月など) は Ruby 同様 undefined を返し、
   // 呼び出し側 (WarekiDate の検証) が invalid date として拒否する
-  return yobj.monthDays[monthIdx] as number
+  return yearMonthDays(yearIndex, monthIdx) as number
 }
 
 export function eraYearToCivil(eraName: string | null | undefined, eraYear: number): number {
@@ -82,15 +91,22 @@ export function altMonthName(month: number): string {
 // Ruby Utils.find_date_ary 相当
 export function findDateParts(jd: number): { year: number; month: number; day: number; isLeapMonth: boolean } {
   if (jd >= GREGORIAN_START_JD) return { ...jdToGregorian(jd), isLeapMonth: false }
-  const yobj = findYearByJd(jd)
-  if (!yobj) throw new UnsupportedDateRangeError(`Unsupported date: jd ${jd}`)
-  const ms = yobj.monthStarts
+  const yearIndex = findYearIndexByJd(jd)
+  if (yearIndex === undefined) throw new UnsupportedDateRangeError(`Unsupported date: jd ${jd}`)
+  const count = yearMonthCount(yearIndex)
   // pos = 何番目の月に入っているか (1-based。閏月も1つと数える)
-  let pos = (ms[ms.length - 1] as number) <= jd ? ms.length : ms.findIndex((m) => jd <= m - 1)
-  const monthStart = ms[pos - 1] as number
-  const isLeapMonth = yobj.leapMonth !== null && yobj.leapMonth === pos - 1
-  if (yobj.leapMonth !== null && yobj.leapMonth < pos) pos -= 1
-  return { year: yobj.year, month: pos, day: jd - monthStart + 1, isLeapMonth }
+  let pos = count
+  for (let i = 1; i < count; i++) {
+    if (jd <= yearMonthStart(yearIndex, i) - 1) {
+      pos = i
+      break
+    }
+  }
+  const monthStart = yearMonthStart(yearIndex, pos - 1)
+  const leapMonth = yearLeapMonth(yearIndex)
+  const isLeapMonth = leapMonth !== null && leapMonth === pos - 1
+  if (leapMonth !== null && leapMonth < pos) pos -= 1
+  return { year: yearNum(yearIndex), month: pos, day: jd - monthStart + 1, isLeapMonth }
 }
 
 export function i2z(num: number): string {

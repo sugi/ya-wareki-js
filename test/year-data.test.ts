@@ -22,8 +22,27 @@ describe('year-data round trip', () => {
   it('decodes all 1428 years identical to the Ruby dump', () => {
     expect(source).toHaveLength(1428)
     for (const y of source) {
-      expect(yearByNum(y.year), `year ${y.year}`).toEqual(y)
+      const actual = yearByNum(y.year)!
+      expect(
+        { ...actual, monthStarts: [...actual.monthStarts], monthDays: [...actual.monthDays] },
+        `year ${y.year}`,
+      ).toEqual(y)
     }
+  })
+
+  it('stores all years in shared flat typed arrays', () => {
+    const first = yearByNum(445)!
+    const next = yearByNum(446)!
+    expect(first.monthStarts).toBeInstanceOf(Int32Array)
+    expect(first.monthDays).toBeInstanceOf(Uint8Array)
+    expect(next.monthStarts.buffer).toBe(first.monthStarts.buffer)
+    expect(next.monthDays.buffer).toBe(first.monthDays.buffer)
+    expect(next.monthStarts.byteOffset - first.monthStarts.byteOffset).toBe(
+      13 * Int32Array.BYTES_PER_ELEMENT,
+    )
+    expect(next.monthDays.byteOffset - first.monthDays.byteOffset).toBe(
+      13 * Uint8Array.BYTES_PER_ELEMENT,
+    )
   })
 
   it('keeps the known irregular records', () => {
@@ -52,6 +71,7 @@ describe('yearByNum / findYearByJd', () => {
   it('returns undefined outside the table', () => {
     expect(yearByNum(444)).toBeUndefined()
     expect(yearByNum(1873)).toBeUndefined()
+    expect(yearByNum(445.5)).toBeUndefined()
     expect(findYearByJd(1883617)).toBeUndefined() // Ruby: find_year(1_883_617) → nil
     expect(findYearByJd(2405160)).toBeUndefined() // グレゴリオ移行後
   })
@@ -62,6 +82,13 @@ describe('yearByNum / findYearByJd', () => {
     expect(findYearByJd(2276257)!.year).toBe(1519)
     expect(findYearByJd(2293061)!.year).toBe(1566)
     expect(findYearByJd(2293443)!.year).toBe(1566)
+  })
+
+  it('finds every year at both table boundaries', () => {
+    for (const y of source) {
+      expect(findYearByJd(y.monthStarts[0]!)?.year, `first jd of ${y.year}`).toBe(y.year)
+      expect(findYearByJd(y.end)?.year, `last jd of ${y.year}`).toBe(y.year)
+    }
   })
 
   it('resolves gap days of START_OVERRIDES years like Ruby (start は判定に使わない)', () => {
