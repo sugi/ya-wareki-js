@@ -44,7 +44,7 @@ npm パッケージとしてだけでなく、jsDelivr などの CDN から `<sc
 - ya-wareki の IIFE は ya-kansuji をバンドルに含める(`<script>` 1枚で完結させるため)。npm 経由では通常の dependency。
 - `engines: { "node": ">=20" }`。ビルドは tsdown、テストは Vitest、公開前検証に publint + @arethetypeswrong/cli。
 - `sideEffects: false`。これを成立させるため、モジュール読み込み時の副作用(自己登録など)を持たない構造にする(後述のフォーマッタレジストリ参照)。
-- ライセンスは Ruby 版と同じ BSD-2-Clause。
+- ライセンスは各移植元の gem と同じにする: ya-kansuji = MIT、ya-wareki = BSD-2-Clause (両 gem でライセンスが異なることに注意)。
 
 ## ya-kansuji API 設計
 
