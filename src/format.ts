@@ -25,6 +25,19 @@ export function expandJDirectives(
   })
 }
 
+// Ruby StdExt.wareki_directive? (format =~ FORMAT_EXPANSION_REGEX) 相当。
+// エスケープされた %%JF のような箇所は本物のディレクティブとして数えない。
+// expandJDirectives と同じ正規表現・エスケープ規則を resolve 経由で再利用する
+// (別の正規表現を書き起こすと escape 判定がずれる恐れがあるため)。
+export function hasJDateDirective(fmt: string): boolean {
+  let found = false
+  expandJDirectives(fmt, DATE_KEY_PART, () => {
+    found = true
+    return undefined
+  })
+  return found
+}
+
 // Ruby Date#_number_format 相当: フラグ文字列を sprintf 風の spec に解決し、
 // spec の先頭が '0' なら 0 埋め、それ以外は空白埋めとして解釈する。
 export function fmtNum(n: number, opt: string): string {
@@ -91,25 +104,45 @@ const pad0 = (n: number, w: number): string => String(n).padStart(w, '0')
 
 // Ruby 版は残りの % コードをプラットフォームの strftime に委譲するが、JS には
 // 委譲先がないため %Y %y %m %d %e %j %F %% のみ自前実装し、他は無変換で通す
-// (設計ドキュメントで確定した意図的差異)。年月日は Ruby の to_date (Date::ITALY:
-// 1582-10-15 以降グレゴリオ暦、以前はユリウス暦) と同じ表現にする。
-function stdStrftime(d: WarekiDate, str: string): string {
-  const jd = d.jd
-  const parts = jd >= ITALY_REFORM_JD ? jdToGregorian(jd) : jdToJulian(jd)
-  const year4 = parts.year < 0 ? `-${pad0(-parts.year, 4)}` : pad0(parts.year, 4)
+// (設計ドキュメントで確定した意図的差異)。
+function stdStrftimeCore(year: number, month: number, day: number, dayOfYear: number, str: string): string {
+  const year4 = year < 0 ? `-${pad0(-year, 4)}` : pad0(year, 4)
   return str.replace(/%([YymdejF%])/g, (whole, code: string) => {
     switch (code) {
       case 'Y': return year4
-      case 'y': return pad0(((parts.year % 100) + 100) % 100, 2)
-      case 'm': return pad0(parts.month, 2)
-      case 'd': return pad0(parts.day, 2)
-      case 'e': return String(parts.day).padStart(2, ' ')
-      case 'j': return pad0(jd - italyToJd(parts.year, 1, 1) + 1, 3)
-      case 'F': return `${year4}-${pad0(parts.month, 2)}-${pad0(parts.day, 2)}`
+      case 'y': return pad0(((year % 100) + 100) % 100, 2)
+      case 'm': return pad0(month, 2)
+      case 'd': return pad0(day, 2)
+      case 'e': return String(day).padStart(2, ' ')
+      case 'j': return pad0(dayOfYear, 3)
+      case 'F': return `${year4}-${pad0(month, 2)}-${pad0(day, 2)}`
       case '%': return '%'
       default: return whole
     }
   })
+}
+
+// 年月日は Ruby の to_date (Date::ITALY: 1582-10-15 以降グレゴリオ暦、以前は
+// ユリウス暦) と同じ表現にする。
+function stdStrftime(d: WarekiDate, str: string): string {
+  const jd = d.jd
+  const parts = jd >= ITALY_REFORM_JD ? jdToGregorian(jd) : jdToJulian(jd)
+  const dayOfYear = jd - italyToJd(parts.year, 1, 1) + 1
+  return stdStrftimeCore(parts.year, parts.month, parts.day, dayOfYear, str)
+}
+
+// %J 日付ディレクティブが実在しない Date 入力向けの経路 (index.ts の format() から
+// 呼ばれる)。Ruby の Time#strftime はネイティブ実装にそのまま委譲するだけで改暦・
+// ユリウス暦補正を経由しないため、WarekiDate/jd 変換を挟まずローカルの年月日を
+// そのまま使う (改暦以前の年でも UnsupportedDateRangeError を投げない)。
+export function stdStrftimeFromDate(date: Date, str: string): string {
+  const year = date.getFullYear()
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  const dayOfYear = Math.round(
+    (Date.UTC(year, month - 1, day) - Date.UTC(year, 0, 1)) / 86_400_000,
+  ) + 1
+  return stdStrftimeCore(year, month, day, dayOfYear, str)
 }
 
 export function formatWareki(d: WarekiDate, fmt: string): string {

@@ -1,6 +1,7 @@
 import { GREGORIAN_START_JD } from './constants.js'
 import { UnsupportedDateRangeError, WarekiInvalidDateError, WarekiParseError } from './errors.js'
-import { formatTime, normalizeTime } from './time.js'
+import { hasJDateDirective, stdStrftimeFromDate } from './format.js'
+import { formatTime, normalizeTime, TIME_QUICK_FILTER } from './time.js'
 import { WarekiDate } from './wareki-date.js'
 
 export { WarekiDate } from './wareki-date.js'
@@ -51,9 +52,12 @@ function extractTimeOfDay(str: string): TimeOfDay | undefined {
 // セットする。和暦として解釈できなければ new Date(正規化文字列) にフォールバックし、
 // それも Invalid Date なら元のエラーを再 throw する。範囲外時刻は WarekiParseError。
 // Ruby は認識済みだが日付として不成立な InvalidDate はフォールバックさせず再 raise する。
+// 時刻抽出は元の文字列が TIME_QUICK_FILTER (時|正午) にマッチする場合のみ行う
+// (Ruby normalize_time と同じゲート)。マッチしなければ "25:00" のような偶然の
+// HH:MM 様の部分文字列があっても和暦の時刻表記としては見ない。
 export function parseToDate(str: string): Date {
   const norm = normalizeTime(str)
-  const tod = extractTimeOfDay(norm)
+  const tod = TIME_QUICK_FILTER.test(str) ? extractTimeOfDay(norm) : undefined
   let dateOnly: Date | undefined
   let original: unknown
   try {
@@ -82,8 +86,9 @@ export function toWarekiDate(date: Date): WarekiDate {
 export function format(date: Date | WarekiDate, fmt = '%JF'): string {
   if (date instanceof WarekiDate) return date.format(fmt)
   const timeExpanded = formatTime(date, fmt)
-  // %JT の展開だけで % が残らなければ日付変換は不要 (Ruby: %J 日付ディレクティブが
-  // 残らなければ to_wareki_date を呼ばない)。暦対象外の年でも %JT のみなら例外にしない。
-  if (!timeExpanded.includes('%')) return timeExpanded
+  // Ruby: wareki_directive?(FORMAT_EXPANSION_REGEX) が実際の %J 日付ディレクティブの
+  // 有無を見て to_wareki_date を呼ぶか決める (単に '%' が残っているかではない)。
+  // 暦対象外の年でも、実ディレクティブが無ければ era 変換を経由しない。
+  if (!hasJDateDirective(timeExpanded)) return stdStrftimeFromDate(date, timeExpanded)
   return WarekiDate.fromDate(date).format(timeExpanded)
 }

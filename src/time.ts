@@ -16,7 +16,8 @@ const TIME_REGEX = new RegExp(
 )
 
 // Ruby TIME_PARSE_QUICK_FILTER。時 も 正午 も含まない文字列はそのまま返す。
-const TIME_QUICK_FILTER = /時|正午/u
+// index.ts の parseToDate も同じフィルタで時刻抽出の要否を判定するため export する。
+export const TIME_QUICK_FILTER = /時|正午/u
 
 const pad2 = (n: number): string => String(n).padStart(2, '0')
 
