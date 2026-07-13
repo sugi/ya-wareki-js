@@ -1,5 +1,5 @@
 import { GREGORIAN_START_YEAR, IMPERIAL_START_YEAR, WESTERN_ERA_NAMES } from './constants.js'
-import { UnsupportedDateRangeError, WarekiParseError } from './errors.js'
+import { UnsupportedDateRangeError, WarekiInvalidDateError } from './errors.js'
 import { findEraByJd } from './era-lookup.js'
 import { formatWareki } from './format.js'
 import { gregorianToJd, italyToJd, jdToGregorian, jdToJulian } from './jd.js'
@@ -76,22 +76,22 @@ export class WarekiDate {
   // Ruby Date#_validate_date! の移植
   #validate(): void {
     if (!(Number.isInteger(this.month) && this.month >= 1 && this.month <= 12))
-      throw new WarekiParseError(`invalid date (month out of range): ${this.inspect()}`)
+      throw new WarekiInvalidDateError(`invalid date (month out of range): ${this.inspect()}`)
     if (!(Number.isInteger(this.day) && this.day >= 1))
-      throw new WarekiParseError(`invalid date (day out of range): ${this.inspect()}`)
+      throw new WarekiInvalidDateError(`invalid date (day out of range): ${this.inspect()}`)
     if (!WESTERN_ERA_NAMES.includes(this.eraName) && this.year < GREGORIAN_START_YEAR) {
       // 暦テーブル外の年は Ruby 同様、jd 変換時の UnsupportedDateRangeError に委ねる
       const yobj = yearByNum(this.year)
       if (!yobj) return
       if (this.isLeapMonth && yobj.leapMonth !== this.month)
-        throw new WarekiParseError(`invalid date (no leap month): ${this.inspect()}`)
+        throw new WarekiInvalidDateError(`invalid date (no leap month): ${this.inspect()}`)
       if (this.day > (yobj.monthDays[this.#monthIndex()] as number))
-        throw new WarekiParseError(`invalid date (day out of range): ${this.inspect()}`)
+        throw new WarekiInvalidDateError(`invalid date (day out of range): ${this.inspect()}`)
     } else {
       if (this.isLeapMonth)
-        throw new WarekiParseError(`invalid date (no leap month): ${this.inspect()}`)
+        throw new WarekiInvalidDateError(`invalid date (no leap month): ${this.inspect()}`)
       if (this.day > this.lastDayOfMonth)
-        throw new WarekiParseError(`invalid date (day out of range): ${this.inspect()}`)
+        throw new WarekiInvalidDateError(`invalid date (day out of range): ${this.inspect()}`)
     }
   }
 

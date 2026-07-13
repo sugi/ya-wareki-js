@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  GREGORIAN_REFORM_JD, UnsupportedDateRangeError, VERSION, WarekiDate, WarekiParseError,
-  format, parse, parseToDate, toWarekiDate,
+  GREGORIAN_REFORM_JD, UnsupportedDateRangeError, VERSION, WarekiDate, WarekiInvalidDateError,
+  WarekiParseError, format, parse, parseToDate, toWarekiDate,
 } from '../src/index.js'
 
 describe('top-level API', () => {
@@ -48,5 +48,29 @@ describe('parseToDate (Ruby wareki_spec より転記)', () => {
 
   it('raises on nonexistent wareki dates without stdlib fallback', () => {
     expect(() => parseToDate('天保1年2月30日')).toThrow(WarekiParseError)
+    expect(() => parseToDate('天保1年2月30日')).toThrow(WarekiInvalidDateError)
+  })
+
+  it('never falls back for a recognized-but-invalid date, even when a stdlib-parseable tail follows (Ruby: rescue InvalidDate; raise)', () => {
+    // 平成五年二月三十日は和暦としては認識できるが存在しない日付 (InvalidDate 相当)。
+    // 末尾の "2020-01-02" は new Date() でパース可能だが、Ruby と同様フォールバックしない。
+    expect(() => parseToDate('平成五年二月三十日 2020-01-02')).toThrow(WarekiInvalidDateError)
+  })
+
+  it('WarekiInvalidDateError is a WarekiParseError (Ruby: InvalidDate < ArgumentError)', () => {
+    expect(new WarekiInvalidDateError('x')).toBeInstanceOf(WarekiParseError)
+    try {
+      parseToDate('平成五年二月三十日')
+      throw new Error('unreachable')
+    } catch (e) {
+      expect(e).toBeInstanceOf(WarekiInvalidDateError)
+      expect(e).toBeInstanceOf(WarekiParseError)
+    }
+  })
+
+  it('still falls back for plain unparseable wareki syntax (ArgumentError, not InvalidDate)', () => {
+    expect(parseToDate('2020-01-02').toISOString().startsWith('2020-01-02')).toBe(true)
+    expect(() => parseToDate('全く日付でない')).toThrow(WarekiParseError)
+    expect(() => parseToDate('全く日付でない')).not.toThrow(WarekiInvalidDateError)
   })
 })

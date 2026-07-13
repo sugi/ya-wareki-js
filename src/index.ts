@@ -1,9 +1,9 @@
 import { GREGORIAN_START_JD } from './constants.js'
-import { UnsupportedDateRangeError, WarekiParseError } from './errors.js'
+import { UnsupportedDateRangeError, WarekiInvalidDateError, WarekiParseError } from './errors.js'
 import { WarekiDate } from './wareki-date.js'
 
 export { WarekiDate } from './wareki-date.js'
-export { UnsupportedDateRangeError, WarekiParseError } from './errors.js'
+export { UnsupportedDateRangeError, WarekiInvalidDateError, WarekiParseError } from './errors.js'
 
 // Ruby の Date::JAPAN (明治改暦日 JD) 相当
 export const GREGORIAN_REFORM_JD: number = GREGORIAN_START_JD
@@ -14,14 +14,17 @@ export function parse(str: string): WarekiDate {
 }
 
 // Ruby Wareki.parse_to_date 相当。和暦として解釈できなければ new Date(str) に
-// フォールバックし、それも Invalid Date なら元のエラーを再 throw する
-// (Ruby は InvalidDate をフォールバックさせず再 raise する。この実装では
-// フォールバック先が Invalid になることで同じ「例外になる」結果を得る)。
+// フォールバックし、それも Invalid Date なら元のエラーを再 throw する。
+// Ruby は認識済みだが日付として不成立な InvalidDate はフォールバックさせず
+// 再 raise し、素の ArgumentError と UnsupportedDateRange のみフォールバックする
+// (common.rb の rescue InvalidDate; raise / rescue ArgumentError, UnsupportedDateRange
+// 相当)。WarekiInvalidDateError はその区別のため他の分岐より先に rethrow する。
 export function parseToDate(str: string): Date {
   let original: unknown
   try {
     return WarekiDate.parse(str).toDate()
   } catch (e) {
+    if (e instanceof WarekiInvalidDateError) throw e
     if (!(e instanceof WarekiParseError) && !(e instanceof UnsupportedDateRangeError)) throw e
     original = e
   }

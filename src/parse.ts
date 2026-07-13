@@ -1,5 +1,5 @@
 import { ALT_MONTH_NAME, KANJI_VARIANTS, NUM_CHARS, SQUARE_ERAS } from './constants.js'
-import { WarekiParseError } from './errors.js'
+import { WarekiInvalidDateError, WarekiParseError } from './errors.js'
 import { ERA_NAME_KEYS, eraByName } from './era-lookup.js'
 import { altMonthNameToNumber, eraYearToCivil, k2i, lastDayOfEraMonth } from './utils.js'
 
@@ -59,7 +59,7 @@ export function parseFields(str: string): ParsedFields {
   if (g['month'] !== undefined) month = k2i(g['month'])
   else if (g['alt_month'] !== undefined) month = altMonthNameToNumber(g['alt_month']) as number
   if (month > 12 || month < 1)
-    throw new WarekiParseError(`invalid date (month out of range): ${str}`)
+    throw new WarekiInvalidDateError(`invalid date (month out of range): ${str}`)
 
   const isLeap = g['is_leap'] !== undefined || g['is_leap_post'] !== undefined
 
