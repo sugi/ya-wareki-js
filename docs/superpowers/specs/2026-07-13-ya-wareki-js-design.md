@@ -28,6 +28,13 @@ npm パッケージとしてだけでなく、jsDelivr などの CDN から `<sc
 
 **配布方式 (2026 年時点のベストプラクティス)**: ESM ファースト + CJS 併給のデュアル配布に、`<script>` タグ用の minified IIFE を1本添える。`exports` マップでは `types` 条件を各ブロックの先頭に置き、`unpkg`/`jsdelivr` フィールドで IIFE を指す。ビルドは tsdown (Rolldown ベース)、検証は publint + @arethetypeswrong/cli。Node 20.19+/22.12+ は `require(esm)` に対応済み。
 
+## 移植対象の Ruby 版の状態
+
+移植対象は wareki リポジトリの **fix/2026-07-13-review ブランチ**とする (ユーザー確認済み、2026-07-13)。
+このブランチは初期設計時の master から挙動が変わっている (検証強化、`Wareki::InvalidDate` の導入、`ERA_JD_LOOKUP` による era 解決の再設計、北朝元号の索引上の扱い変更)。
+起草時の HEAD は cdfa641 だが、ブランチは進行中の可能性があるため、**各計画の実行開始時に HEAD を再確認**し、進んでいた場合は `lib/` 配下の差分を評価してから着手する。
+データ生成・ゴールデン生成ツールは、生成物ヘッダに `git -C ../wareki describe --always --dirty` の値を記録する。
+
 ## パッケージ構成
 
 | | ya-kansuji | ya-wareki |
