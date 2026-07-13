@@ -2,6 +2,7 @@ import { GREGORIAN_START_YEAR, IMPERIAL_START_YEAR, WESTERN_ERA_NAMES } from './
 import { UnsupportedDateRangeError, WarekiParseError } from './errors.js'
 import { findEraByJd } from './era-lookup.js'
 import { gregorianToJd, italyToJd, jdToGregorian, jdToJulian } from './jd.js'
+import { parseFields } from './parse.js'
 import { eraYearToCivil, findDateParts, lastDayOfEraMonth } from './utils.js'
 import { yearByNum } from './year-data.js'
 
@@ -22,6 +23,11 @@ export class WarekiDate {
     this.isLeapMonth = isLeapMonth
     this.year = eraYearToCivil(this.eraName, eraYear)
     this.#validate()
+  }
+
+  static parse(str: string): WarekiDate {
+    const f = parseFields(str)
+    return new WarekiDate(f.era, f.year, f.month, f.day, f.isLeap)
   }
 
   static fromJd(jd: number): WarekiDate {
