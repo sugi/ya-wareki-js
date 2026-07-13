@@ -1,6 +1,7 @@
 import { GREGORIAN_START_YEAR, IMPERIAL_START_YEAR, WESTERN_ERA_NAMES } from './constants.js'
 import { UnsupportedDateRangeError, WarekiParseError } from './errors.js'
 import { findEraByJd } from './era-lookup.js'
+import { formatWareki } from './format.js'
 import { gregorianToJd, italyToJd, jdToGregorian, jdToJulian } from './jd.js'
 import { parseFields } from './parse.js'
 import { eraYearToCivil, findDateParts, lastDayOfEraMonth } from './utils.js'
@@ -160,5 +161,37 @@ export class WarekiDate {
       fields.day ?? this.day,
       fields.isLeapMonth ?? this.isLeapMonth,
     )
+  }
+
+  format(fmt = '%JF'): string {
+    return formatWareki(this, fmt)
+  }
+
+  get eraYearKanji(): string {
+    return formatWareki(this, '%JGk')
+  }
+
+  get eraYearKanjiSpecial(): string {
+    return formatWareki(this, '%JGK')
+  }
+
+  get yearKanji(): string {
+    return formatWareki(this, '%JOk')
+  }
+
+  get monthKanji(): string {
+    return formatWareki(this, '%JSk')
+  }
+
+  get monthAltName(): string {
+    return formatWareki(this, '%JSK')
+  }
+
+  get dayKanji(): string {
+    return formatWareki(this, '%JDk')
+  }
+
+  get leapMonthMark(): string {
+    return formatWareki(this, '%JLk')
   }
 }
