@@ -233,6 +233,10 @@ format(new Date(NaN), '%JTf')      -> NaN時NaN分NaN秒
 
 ## F-08 データ生成ツールがシェルへパスを展開する
 
+2026-07-14追記: `tools/encode-data.mjs`はdata-localeを直接参照する構成へ変更され、
+`WAREKI_DIR`と`execSync`への依存は解消した。
+以下はレビュー時点の記録であり、現在残る対象はRuby比較用の`tools/gen-golden.rb`だけである。
+
 ### 根拠
 
 [`tools/encode-data.mjs`](../../tools/encode-data.mjs#L21) は `WAREKI_DIR` 由来の値をテンプレート文字列で `execSync` に渡す。

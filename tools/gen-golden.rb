@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Ruby 版 wareki を正として JD → 和暦・フォーマットの対照表 CSV を生成する。
+# Ruby 版 wareki との比較用に JD → 和暦・フォーマットの対照表 CSV を生成する。
 # 再生成時のみ手元で実行する (CI では実行しない。CSV はコミット済み)。
 # 実行には ya_kansuji gem が必要: gem install ya_kansuji
 # 参照元は WAREKI_DIR (既定 ../wareki)。.git を持たないチェックアウト

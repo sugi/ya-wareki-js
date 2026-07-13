@@ -1,5 +1,6 @@
 // このファイルは tools/encode-data.mjs が生成する。手動編集禁止。
-// 生成元 wareki: v2.0.0 (WAREKI_DIR/WAREKI_PROVENANCE、既定は git -C ../wareki describe --always --dirty)
+// 生成元 data-locale: https://raw.githubusercontent.com/manakai/data-locale/master/data/calendar/kyuureki-map.txt
+// 入力 SHA-256: cfd10efe073a8a8a7ba0de7c53402a7c67a0c8a91c5c95fd14e98d1fc5eb1dfb
 // 形式: 1年 = 17bit (leapMonth<<13 | 月の大小ビット) を6bit英数字3文字で符号化。
 // 詳細は tools/encode-data.mjs と実装計画 Task 3 を参照。
 export const FIRST_YEAR = 445

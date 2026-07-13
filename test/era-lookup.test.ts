@@ -8,7 +8,7 @@ describe('eraByName', () => {
   it('resolves canonical names', () => {
     expect(eraByName('明治')).toMatchObject({ name: '明治', year: 1868, start: 2403357, end: 2419613 })
     expect(eraByName('令和')!.end).toBe(Number.MAX_SAFE_INTEGER)
-    // 建武は南朝定義 (ERA_DEFS) が北朝定義を上書きする
+    // 建武は通常定義 (ERA_DEFS) が北朝定義を上書きする
     expect(eraByName('建武')).toMatchObject({ year: 1334, start: 2208365, end: 2209133 })
     // 北朝元号も名前では引ける
     expect(eraByName('暦応')).toMatchObject({ year: 1338 })
@@ -29,7 +29,7 @@ describe('eraByName', () => {
     expect(eraByName('萬延')!.name).toBe('万延')
   })
 
-  it('returns undefined for unknown names and 紀元前 (Ruby と同じ)', () => {
+  it('returns undefined for unknown names and 紀元前', () => {
     expect(eraByName('謎元号')).toBeUndefined()
     expect(eraByName('紀元前')).toBeUndefined() // パーサ側で特別扱いされる
   })
@@ -52,32 +52,35 @@ describe('normalizeKanjiVariants', () => {
   })
 })
 
-describe('findEraByJd (Ruby Utils.find_era)', () => {
+describe('findEraByJd', () => {
   it('returns proper era around boundaries', () => {
     expect(findEraByJd(2400509)!.name).toBe('万延') // 1860-04-08
     expect(findEraByJd(2400508)!.name).toBe('安政') // 1860-04-07
     expect(findEraByJd(2447534)!.name).toBe('昭和')
     expect(findEraByJd(2424875)!.name).toBe('昭和')
     expect(findEraByJd(2403357)!.name).toBe('明治')
+    expect(findEraByJd(2403629)!.name).toBe('明治')
     expect(findEraByJd(2419613)!.name).toBe('明治')
   })
 
-  it('returns new era on overlap day', () => {
+  it('returns new era on its first day', () => {
     expect(findEraByJd(1958551)!.name).toBe('白雉')
     expect(findEraByJd(2256978)!.name).toBe('応仁')
   })
 
   it('returns undefined on missing era gaps', () => {
     expect(findEraByJd(1960640)).toBeUndefined() // 655-12-10 (白雉と朱鳥の間)
-    expect(findEraByJd(1971894)).toBeUndefined() // 686-10-02 (朱鳥の直後)
+    expect(findEraByJd(1960339)!.name).toBe('白雉') // 互換規則により改元日の翌日まで含む
+    expect(findEraByJd(1960340)).toBeUndefined()
+    expect(findEraByJd(1972033)!.name).toBe('朱鳥')
+    expect(findEraByJd(1972034)).toBeUndefined()
     expect(findEraByJd(1956841)).toBeUndefined() // 大化より前
   })
 
-  it('resolves overlapping nanboku-cho era definitions by ERA_DEFS array order (Ruby reverse_each)', () => {
+  it('resolves overlapping nanboku-cho era definitions by ERA_DEFS array order', () => {
     // ERA_DEFS には南北朝期の元号区間が複数重なって収録されている
     // (元弘/正慶、南朝の延元〜元中/北朝の暦応〜康応、元中/明徳)。
-    // Ruby の find_era は配列を逆順に走査するため、南朝が常に勝つわけではなく
-    // 配列内で後に定義された方が勝つ (以下はすべて Ruby 側で直接確認済み)。
+    // 配列を逆順に走査するため、後に置いた北朝元号が優先される。
     expect(findEraByJd(2209541)!.name).toBe('延元') // 1337-06-01 (Gregorian, 北朝元号未開始)
     expect(findEraByJd(2210692)!.name).toBe('暦応') // 1340-07-26 (北朝が勝つ)
     expect(findEraByJd(2214492)!.name).toBe('観応') // 1350-12-21 (北朝が勝つ)
@@ -88,13 +91,11 @@ describe('findEraByJd (Ruby Utils.find_era)', () => {
 })
 
 describe('ERA_DEFS / ERA_NORTH_DEFS / ERA_NAME_KEYS invariants', () => {
-  it('keeps ERA_DEFS/ERA_NORTH_DEFS untouched and ERA_NAME_KEYS ordered', () => {
+  it('keeps generated definitions and ERA_NAME_KEYS ordered', () => {
     expect(ERA_DEFS.find((e) => e.name === '慶応')!.end).toBe(2403629)
     expect(ERA_NORTH_DEFS.find((e) => e.name === '建武')!.end).toBe(2210046)
     expect(ERA_NAME_KEYS).toContain('')
-    // Ruby: `a = b = v` は b を先に挿入するため実際の挿入順は
-    // ..., 神武天皇即位紀元, 皇紀, '', 西暦 (ruby -Ilib -r wareki -e
-    // 'p Wareki::ERA_BY_NAME.keys.last(5)' で確認済み)
+    // 特殊元号の挿入順はパーサーの候補順として固定する。
     expect(ERA_NAME_KEYS.slice(-4)).toEqual(['神武天皇即位紀元', '皇紀', '', '西暦'])
     expect(ERA_NAME_KEYS.at(-1)).toBe('西暦')
   })
