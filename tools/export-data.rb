@@ -1,12 +1,13 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Ruby 版 wareki (../wareki) の定義データを JSON にダンプする。
+# Ruby 版 wareki (WAREKI_DIR、既定は ../wareki) の定義データを JSON にダンプする。
 # 再生成時のみ手元で実行する。CI では実行しない (生成物はコミット済み)。
 require 'json'
 require 'fileutils'
 
-wareki_lib = File.expand_path('../../wareki/lib', __dir__)
+wareki_dir = ENV['WAREKI_DIR'] || File.expand_path('../../wareki', __dir__)
+wareki_lib = File.join(wareki_dir, 'lib')
 File.directory?(wareki_lib) or abort "wareki gem source not found: #{wareki_lib}"
 $LOAD_PATH.unshift wareki_lib
 # wareki.rb 本体は ya_kansuji gem を要求するため、データ定義ファイルだけを読む
