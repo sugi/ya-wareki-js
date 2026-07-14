@@ -4,9 +4,9 @@
 書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/)、
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
-## [0.1.0] - 未リリース
+## [0.1.0] - 2026-07-15
 
-初回リリース。npm publish 時にこの見出しへ公開日を記入する。
+初回リリース。
 
 ### 追加
 
