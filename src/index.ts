@@ -128,12 +128,14 @@ export function toWarekiDate(date: Date): WarekiDate {
  * @param date `Date` または {@link WarekiDate}
  * @param fmt フォーマット文字列 (既定 `'%JF'`)
  * @returns フォーマット済み文字列
+ * @throws {RangeError} 無効な Date (Invalid Date) を渡したとき
  * @example
  * format(new Date(2019, 4, 4))        // => '令和元年五月四日'
  * format(new Date(2019, 4, 4), '%Jf') // => '令和01年05月04日'
  */
 export function format(date: Date | WarekiDate, fmt = '%JF'): string {
   if (date instanceof WarekiDate) return date.format(fmt)
+  if (Number.isNaN(date.getTime())) throw new RangeError('format() received an invalid Date')
   const timeExpanded = formatTime(date, fmt)
   // Ruby: wareki_directive?(FORMAT_EXPANSION_REGEX) が実際の %J 日付ディレクティブの
   // 有無を見て to_wareki_date を呼ぶか決める (単に '%' が残っているかではない)。

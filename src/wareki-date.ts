@@ -45,6 +45,7 @@ export class WarekiDate {
    * @param month 月 (1〜12、既定 1)
    * @param day 日 (1 以上、既定 1)
    * @param isLeapMonth 閏月なら `true` (既定 `false`)
+   * @throws {RangeError} eraYear が安全な整数でない、または元号・皇紀で 1 未満のとき
    * @throws {WarekiInvalidDateError} 月・日・閏月がその年で成立しないとき
    */
   constructor(eraName: string | null, eraYear: number, month = 1, day = 1, isLeapMonth = false) {
@@ -53,6 +54,7 @@ export class WarekiDate {
     this.month = month
     this.day = day
     this.isLeapMonth = isLeapMonth
+    this.#validateEraYear()
     this.year = eraYearToCivil(this.eraName, eraYear)
     this.#validate()
     // プライベートフィールド #jd はプロパティ記述子を持たないため freeze の影響を受けず、
@@ -87,8 +89,11 @@ export class WarekiDate {
   /**
    * `Date` から {@link WarekiDate} を作る。既定はローカルタイムゾーンの年月日、
    * `{ utc: true }` を渡すと UTC の年月日を使う。
+   * @throws {RangeError} 無効な Date (Invalid Date) を渡したとき
    */
   static fromDate(date: Date, opts: { utc?: boolean } = {}): WarekiDate {
+    if (Number.isNaN(date.getTime()))
+      throw new RangeError('WarekiDate.fromDate() received an invalid Date')
     const [y, m, d] = opts.utc
       ? [date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate()]
       : [date.getFullYear(), date.getMonth() + 1, date.getDate()]
@@ -121,6 +126,16 @@ export class WarekiDate {
     let idx = this.month - 1
     if (this.isLeapMonth || (leapMonth !== null && this.month > leapMonth)) idx += 1
     return idx
+  }
+
+  // 元号・皇紀は元年(=1)起点なので正の整数のみ。西暦・紀元前 (WESTERN_ERA_NAMES) は
+  // civil year 0 や負数が先発グレゴリオ暦上の正当な値になり得るため下限を課さない。
+  // いずれの暦でも安全な整数でなければ jd が NaN・小数になりクラスの前提が崩れる。
+  #validateEraYear(): void {
+    if (!Number.isSafeInteger(this.eraYear))
+      throw new RangeError(`invalid eraYear (must be a safe integer): ${this.eraYear}`)
+    if (!WESTERN_ERA_NAMES.includes(this.eraName) && this.eraYear <= 0)
+      throw new RangeError(`invalid eraYear (must be >= 1 for era '${this.eraName}'): ${this.eraYear}`)
   }
 
   // Ruby Date#_validate_date! の移植

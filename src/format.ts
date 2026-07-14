@@ -1,6 +1,6 @@
 import { toKan } from 'ya-kansuji'
 import { ITALY_REFORM_JD } from './constants.js'
-import { italyToJd, jdToGregorian, jdToJulian } from './jd.js'
+import { gregorianToJd, italyToJd, jdToGregorian, jdToJulian } from './jd.js'
 import { altMonthName, i2z } from './utils.js'
 import type { WarekiDate } from './wareki-date.js'
 
@@ -149,9 +149,9 @@ export function stdStrftimeFromDate(date: Date, str: string): string {
   const year = date.getFullYear()
   const month = date.getMonth() + 1
   const day = date.getDate()
-  const dayOfYear = Math.round(
-    (Date.UTC(year, month - 1, day) - Date.UTC(year, 0, 1)) / 86_400_000,
-  ) + 1
+  // 先発グレゴリオ暦上の通日。多引数 Date.UTC は 0〜99 年を 1900 年代へ写すため
+  // (西暦0年は閏年だが 1900 は平年)、JD 差で計算して 0〜99 年とタイムゾーンの影響を避ける。
+  const dayOfYear = gregorianToJd(year, month, day) - gregorianToJd(year, 1, 1) + 1
   return stdStrftimeCore(year, month, day, dayOfYear, str)
 }
 
