@@ -33,9 +33,21 @@ function timeMatchToStr(g: Record<string, string | undefined>): string {
   return `${pad2(hour)}:${pad2(min)}:${pad2(k2i(g['sec']))}`
 }
 
-// 日本語の時刻表記 (漢数字・全角数字の時分秒、午前/午後、半、正午) を等価な
-// "HH:MM(:SS)" 表記へ置換する。Ruby の String#sub と同じく最初の1箇所のみ置換し、
-// 値の範囲チェックはしない。
+/**
+ * 文字列中の最初の日本語時刻表記を等価な `"HH:MM"` / `"HH:MM:SS"` に置換して返す。
+ *
+ * 漢数字・全角数字の時分秒、午前/午後、半、正午に対応する。Ruby の `String#sub` と
+ * 同じく最初の1箇所だけを置換し、値の範囲チェックはしない (`二十五時` → `25:00`)。
+ * 「午前」は無変換、「午後」は12時未満のときだけ +12 する。時刻表記を含まない文字列は
+ * そのまま返す。
+ *
+ * @param str 変換対象の文字列
+ * @returns 最初の時刻表記を数字表記へ置換した文字列
+ * @example
+ * normalizeTime('午後三時半')            // => '15:30'
+ * normalizeTime('正午')                  // => '12:00'
+ * normalizeTime('平成元年五月四日十二時') // => '平成元年五月四日12:00'
+ */
 export function normalizeTime(str: string): string {
   const s = String(str)
   if (!TIME_QUICK_FILTER.test(s)) return s
@@ -45,6 +57,7 @@ export function normalizeTime(str: string): string {
   })
 }
 
+/** {@link formatTime} に渡せる時刻要素。24時間制の時・分・秒。 */
 export interface TimeParts {
   hour: number
   minute: number
@@ -84,9 +97,19 @@ function formatTimeKey(t: TimeParts, key: string, opt: string): string | undefin
   }
 }
 
-// Ruby Utils.expand_time_format の移植。%JT ディレクティブのみ展開し、%J 日付
-// ディレクティブや %% など他はそのまま残す (呼び出し側が後段で処理する)。
-// Date を渡した場合はローカル時刻の時/分/秒を使う (fromDate のローカル既定と一致)。
+/**
+ * 時刻オブジェクトまたは `Date` を、フォーマット文字列中の `%JT` 系ディレクティブに
+ * 従って展開する。`%J` 日付ディレクティブや `%%` などはそのまま残すので、呼び出し側で
+ * 後続処理できる。`Date` を渡した場合はローカル時刻の時/分/秒を使う。
+ *
+ * 使用できる `%JT` コードは README「%JT フォーマットディレクティブ」を参照。
+ *
+ * @param time 時・分・秒を持つ {@link TimeParts}、または `Date`
+ * @param fmt `%JT` 系コードを含むフォーマット文字列
+ * @returns `%JT` ディレクティブを展開した文字列
+ * @example
+ * formatTime({ hour: 13, minute: 45, second: 6 }, '%JTHk時%JTMk分') // => '十三時四十五分'
+ */
 export function formatTime(time: TimeParts | Date, fmt: string): string {
   const t = toTimeParts(time)
   return expandJDirectives(fmt, TIME_KEY_PART, (key, opt) => formatTimeKey(t, key, opt))

@@ -9,20 +9,34 @@ export { UnsupportedDateRangeError, WarekiInvalidDateError, WarekiParseError } f
 export { formatTime, normalizeTime } from './time.js'
 export type { TimeParts } from './time.js'
 
-// Ruby の Date::JAPAN (明治改暦日 JD) 相当
+/**
+ * 明治の改暦日 (明治6年1月1日 = グレゴリオ暦1873年1月1日) のユリウス日。
+ * この日以降が新暦 (グレゴリオ暦)、前日までが旧暦。Ruby の `Date::JAPAN` に相当する。
+ */
 export const GREGORIAN_REFORM_JD: number = GREGORIAN_START_JD
+
+/** このライブラリのバージョン (`package.json` の `version` と一致)。 */
 export const VERSION = '0.1.0'
 
+/**
+ * 和暦文字列をパースして {@link WarekiDate} を返す。時刻表記が続く場合は無視して
+ * 日付だけを返す (Ruby の `Date.parse` と同じ)。
+ *
+ * 元号・漢数字・旧字体・合字 (㍾㍽㍼㍻㋿)・閏月・月の別名・朔/晦/元旦などの慣用表記を
+ * 受け付ける。
+ *
+ * @param str 和暦日付を表す文字列 (例: `'元仁元年閏七月朔日'`)
+ * @returns パース結果の {@link WarekiDate}
+ * @throws {WarekiInvalidDateError} 和暦としては認識できたが日付として成立しないとき
+ * @throws {WarekiParseError} 和暦日付として解釈できないとき
+ * @throws {UnsupportedDateRangeError} サポート範囲外の日付のとき
+ * @example
+ * parse('天和3年閏5月4日').format('%JF') // => '天和三年閏五月四日'
+ */
 export function parse(str: string): WarekiDate {
   return WarekiDate.parse(str)
 }
 
-// Ruby Wareki.parse_to_date 相当。和暦として解釈できなければ new Date(str) に
-// フォールバックし、それも Invalid Date なら元のエラーを再 throw する。
-// Ruby は認識済みだが日付として不成立な InvalidDate はフォールバックさせず
-// 再 raise し、素の ArgumentError と UnsupportedDateRange のみフォールバックする
-// (common.rb の rescue InvalidDate; raise / rescue ArgumentError, UnsupportedDateRange
-// 相当)。WarekiInvalidDateError はその区別のため他の分岐より先に rethrow する。
 // 正規化後の文字列に含まれる最初の "HH:MM(:SS)" 時刻を取り出す。数字境界
 // (?<!\d) / (?!\d) で桁の連続全体を1成分として捕捉し、範囲外時刻 (3桁以上、
 // 例: 百時 -> '100:00') が短い部分文字列 ('00:00' 等) に部分一致して誤って
@@ -49,14 +63,25 @@ function extractTimeOfDay(str: string): TimeOfDay | undefined {
   return { hour, min, sec }
 }
 
-// Ruby Wareki.parse_to_date + std_ext の Time.parse 相当。まず normalizeTime を適用し、
-// 和暦日付としてパースできれば、正規化後の文字列に時刻表記があればローカル時刻として
-// セットする。和暦として解釈できなければ new Date(正規化文字列) にフォールバックし、
-// それも Invalid Date なら元のエラーを再 throw する。範囲外時刻は WarekiParseError。
-// Ruby は認識済みだが日付として不成立な InvalidDate はフォールバックさせず再 raise する。
-// 時刻抽出は元の文字列が TIME_QUICK_FILTER (時|正午) にマッチする場合のみ行う
-// (Ruby normalize_time と同じゲート)。マッチしなければ "25:00" のような偶然の
-// HH:MM 様の部分文字列があっても和暦の時刻表記としては見ない。
+/**
+ * 文字列を `Date` へ変換する。まず {@link normalizeTime} を適用し、和暦日付として
+ * 解釈できれば、時刻表記があればそれをローカル時刻としてセットした `Date` を返す。
+ * 和暦として解釈できなければ `new Date(正規化後の文字列)` にフォールバックする。
+ *
+ * @remarks
+ * 認識できたが日付として不成立な {@link WarekiInvalidDateError} の場合はフォールバック
+ * せず常に再 throw する (Ruby の `rescue InvalidDate; raise` 相当)。時刻抽出は元の
+ * 文字列が「時」または「正午」を含むときだけ行う。
+ *
+ * @param str 和暦日付 (＋任意の時刻表記) を表す文字列
+ * @returns 変換結果の `Date` (時刻表記が無ければローカル深夜)
+ * @throws {WarekiInvalidDateError} 和暦として認識できたが日付として成立しないとき
+ * @throws {WarekiParseError} 範囲外の時刻、または和暦としてもフォールバックとしても解釈できないとき
+ * @throws {UnsupportedDateRangeError} 和暦としてサポート範囲外で、フォールバックも失敗したとき
+ * @example
+ * parseToDate('平成元年五月四日十二時三十四分') // => Date (ローカル 1989-05-04 12:34:00)
+ * parseToDate('㍻一〇年 肆月 晦日')            // => Date (1998-04-30)
+ */
 export function parseToDate(str: string): Date {
   const norm = normalizeTime(str)
   const tod = TIME_QUICK_FILTER.test(str) ? extractTimeOfDay(norm) : undefined
@@ -78,13 +103,35 @@ export function parseToDate(str: string): Date {
   return fallback
 }
 
+/**
+ * `Date` を {@link WarekiDate} へ変換する。既定はローカルタイムゾーンの年月日
+ * ({@link WarekiDate.fromDate} を呼ぶ)。
+ *
+ * @param date 変換対象の `Date`
+ * @returns 対応する {@link WarekiDate}
+ * @example
+ * toWarekiDate(new Date(1683, 5, 28)).format('%JF') // => '天和三年閏五月四日'
+ */
 export function toWarekiDate(date: Date): WarekiDate {
   return WarekiDate.fromDate(date)
 }
 
-// JS Date を渡した場合は Ruby std_ext の expand_all_wareki_formats と同じ順で、まず
-// %JT 時刻ディレクティブをローカル時刻から展開し、続けて %J 日付ディレクティブを展開する。
-// WarekiDate を渡した場合は時刻情報が無いため %JT はリテラルのまま残る (Ruby の Date と同じ)。
+/**
+ * `Date` または {@link WarekiDate} をフォーマット文字列に従って文字列化する。既定は
+ * `'%JF'` (例: `令和元年五月四日`)。使用できる `%J` / `%JT` コードは README
+ * 「フォーマット文字列一覧」を参照。
+ *
+ * `Date` を渡した場合はまず `%JT` 時刻ディレクティブをローカル時刻から展開し、続けて
+ * `%J` 日付ディレクティブを展開する。{@link WarekiDate} を渡した場合は時刻情報が無い
+ * ため `%JT` はリテラルのまま残る。
+ *
+ * @param date `Date` または {@link WarekiDate}
+ * @param fmt フォーマット文字列 (既定 `'%JF'`)
+ * @returns フォーマット済み文字列
+ * @example
+ * format(new Date(2019, 4, 4))        // => '令和元年五月四日'
+ * format(new Date(2019, 4, 4), '%Jf') // => '令和01年05月04日'
+ */
 export function format(date: Date | WarekiDate, fmt = '%JF'): string {
   if (date instanceof WarekiDate) return date.format(fmt)
   const timeExpanded = formatTime(date, fmt)
