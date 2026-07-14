@@ -187,4 +187,10 @@ describe('Date-path format: %j for years 0-99 and Invalid Date guard (F-06 / F-0
     expect(() => format(new Date(NaN))).toThrow(RangeError)
     expect(() => toWarekiDate(new Date(NaN))).toThrow(RangeError)
   })
+
+  it('rejects non-Date arguments to format() with RangeError, not garbage', () => {
+    expect(() => format(null as unknown as Date)).toThrow(RangeError)
+    expect(() => format('2019-05-04' as unknown as Date)).toThrow(RangeError)
+    expect(() => format({} as unknown as Date)).toThrow(RangeError)
+  })
 })

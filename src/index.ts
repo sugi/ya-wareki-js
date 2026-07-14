@@ -109,6 +109,7 @@ export function parseToDate(str: string): Date {
  *
  * @param date 変換対象の `Date`
  * @returns 対応する {@link WarekiDate}
+ * @throws {RangeError} 無効な Date (Invalid Date) を渡したとき ({@link WarekiDate.fromDate} 経由)
  * @example
  * toWarekiDate(new Date(1683, 5, 28)).format('%JF') // => '天和三年閏五月四日'
  */
@@ -135,7 +136,9 @@ export function toWarekiDate(date: Date): WarekiDate {
  */
 export function format(date: Date | WarekiDate, fmt = '%JF'): string {
   if (date instanceof WarekiDate) return date.format(fmt)
-  if (Number.isNaN(date.getTime())) throw new RangeError('format() received an invalid Date')
+  // 型は Date だが JS 呼び出し元は非 Date を渡し得るので、instanceof も含めて一律 RangeError にする。
+  if (!(date instanceof Date) || Number.isNaN(date.getTime()))
+    throw new RangeError('format() received an invalid Date')
   const timeExpanded = formatTime(date, fmt)
   // Ruby: wareki_directive?(FORMAT_EXPANSION_REGEX) が実際の %J 日付ディレクティブの
   // 有無を見て to_wareki_date を呼ぶか決める (単に '%' が残っているかではない)。
