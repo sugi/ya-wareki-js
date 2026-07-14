@@ -2,7 +2,7 @@ name: CI
 # ya-kansuji は npm 未公開のため、GitHub の sugi/ya-kansuji-js をチェックアウトして
 # ビルドし、ローカル依存としてインストールする。
 # ya-kansuji publish 後にやること:
-#   1. 下の「ya-kansuji from GitHub」2ステップを削除し、npm install を素の
+#   1. 各ジョブの「ya-kansuji from GitHub」ステップを削除し、npm install を素の
 #      `npm install` (または lockfile コミット後は `npm ci` + cache: 'npm') に戻す
 #   2. package-lock.json を .gitignore から外してコミットする
 on:
@@ -11,17 +11,18 @@ on:
   pull_request:
 jobs:
   test:
+    name: Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: ['22', '24']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           repository: sugi/ya-kansuji-js
           path: .deps/ya-kansuji-js
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
       - name: Build ya-kansuji from GitHub
@@ -48,3 +49,36 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - run: npx publint
       - run: npx @arethetypeswrong/cli --pack .
+
+  smoke:
+    # engines.node の最低サポート版でビルド済み成果物が動くことを検証する。
+    # ビルドツール (tsdown は Node ^22.18、vitest は >=20 が必要) は最低ランタイムでは
+    # 動かないため、ビルドは現行 Node で行い、成果物の実行だけを最低サポート版へ
+    # 切り替えて `npm run smoke` (素の node による ESM/CJS/IIFE チェック) を回す。
+    name: Runtime smoke (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['18']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: sugi/ya-kansuji-js
+          path: .deps/ya-kansuji-js
+      - name: Set up build toolchain Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Build ya-kansuji + ya-wareki
+        run: |
+          (cd .deps/ya-kansuji-js && npm ci && npm run build)
+          npm install ./.deps/ya-kansuji-js
+          git restore package.json
+          npm run build
+      - name: Switch to minimum supported runtime
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Smoke test built artifacts on minimum runtime
+        run: npm run smoke

@@ -36,18 +36,20 @@
     "dist",
     "src",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "sideEffects": false,
   "engines": {
-    "node": ">=22"
+    "node": ">=18"
   },
   "scripts": {
     "build": "tsdown",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build && npm test && npx publint && npx @arethetypeswrong/cli --pack .",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "smoke": "node test/smoke-runtime.mjs"
   },
   "dependencies": {
     "ya-kansuji": "^0.1.0"

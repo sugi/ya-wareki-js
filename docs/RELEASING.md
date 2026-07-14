@@ -34,7 +34,8 @@
    ```
 4. ~~**GitHub リポジトリ作成後**: package.json に `repository` / `bugs` / `homepage` を追加する~~ (済 2026-07-13: 両リポジトリ作成・push 済み、フィールド追加済み。CI は sibling checkout で緑)。
 5. **lockfile復帰**: `.gitignore`からpackage-lock.jsonを外し、registryのya-kansujiで`npm install`し直してlockfileをコミット。CIを`npm ci` + `cache: 'npm'`に切り替える (手順はci.ymlのコメントに記載済み)。
-6. `npm publish` (prepublishOnly が build/test/publint/attw を再実行する)。リポジトリ公開後は `--provenance` を検討。v0.1.0 タグを打ち、master の CI が緑になることを確認する。
+6. **CHANGELOG 確定**: `CHANGELOG.md` の `[0.1.0] - 未リリース` の見出しに公開日を記入する。
+7. `npm publish` (prepublishOnly が build/test/publint/attw を再実行する)。リポジトリ公開後は `--provenance` を検討。v0.1.0 タグを打ち、master の CI が緑になることを確認する。
 
 ## 残っている軽微な改善候補 (任意)
 
