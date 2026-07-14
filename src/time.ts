@@ -65,8 +65,11 @@ export interface TimeParts {
 }
 
 function toTimeParts(time: TimeParts | Date): TimeParts {
-  if (time instanceof Date)
+  if (time instanceof Date) {
+    if (Number.isNaN(time.getTime()))
+      throw new RangeError('formatTime() received an invalid Date')
     return { hour: time.getHours(), minute: time.getMinutes(), second: time.getSeconds() }
+  }
   return time
 }
 
@@ -107,6 +110,7 @@ function formatTimeKey(t: TimeParts, key: string, opt: string): string | undefin
  * @param time 時・分・秒を持つ {@link TimeParts}、または `Date`
  * @param fmt `%JT` 系コードを含むフォーマット文字列
  * @returns `%JT` ディレクティブを展開した文字列
+ * @throws {RangeError} 無効な Date (Invalid Date) を渡したとき
  * @example
  * formatTime({ hour: 13, minute: 45, second: 6 }, '%JTHk時%JTMk分') // => '十三時四十五分'
  */

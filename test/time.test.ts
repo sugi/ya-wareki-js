@@ -79,4 +79,8 @@ describe('formatTime (Ruby utils_spec「expands %JT time format directives」転
     expect(formatTime(d, '%JTF')).toBe('十三時四十五分六秒')
     expect(formatTime(d, '%JTf')).toBe('13時45分06秒')
   })
+
+  it('rejects an Invalid Date (F-07)', () => {
+    expect(() => formatTime(new Date(NaN), '%JTf')).toThrow(RangeError)
+  })
 })

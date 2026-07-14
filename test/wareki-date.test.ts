@@ -49,6 +49,22 @@ describe('WarekiDate constructor', () => {
   it('rejects unknown era names', () => {
     expect(() => new WarekiDate('謎元号', 1)).toThrow(WarekiParseError)
   })
+
+  it('validates eraYear domain (F-05)', () => {
+    // 元号・皇紀は元年(=1)起点。0・負数・非整数・Infinity は RangeError。
+    expect(() => new WarekiDate('令和', 0)).toThrow(RangeError)
+    expect(() => new WarekiDate('令和', -1)).toThrow(RangeError)
+    expect(() => new WarekiDate('令和', 1.5)).toThrow(RangeError)
+    expect(() => new WarekiDate('令和', Infinity)).toThrow(RangeError)
+    expect(() => new WarekiDate('令和', NaN)).toThrow(RangeError)
+    expect(() => WarekiDate.imperial(0)).toThrow(RangeError)
+    expect(() => WarekiDate.imperial(-5)).toThrow(RangeError)
+    // 西暦・紀元前は先発グレゴリオ暦の 0・負数を正当な civil year として許容する。
+    expect(new WarekiDate('西暦', 0, 1, 1).year).toBe(0)
+    expect(new WarekiDate('紀元前', 1, 1, 1).year).toBe(-1)
+    // ただし非整数はどの暦でも拒否する。
+    expect(() => new WarekiDate('西暦', 1.5)).toThrow(RangeError)
+  })
 })
 
 describe('WarekiDate.fromJd', () => {
@@ -132,6 +148,10 @@ describe('fromDate / today', () => {
 
   it('today() equals fromDate(new Date())', () => {
     expect(WarekiDate.today().equals(WarekiDate.fromDate(new Date()))).toBe(true)
+  })
+
+  it('rejects an Invalid Date (F-07)', () => {
+    expect(() => WarekiDate.fromDate(new Date(NaN))).toThrow(RangeError)
   })
 })
 

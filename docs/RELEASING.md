@@ -39,7 +39,6 @@
 
 ## 残っている軽微な改善候補 (任意)
 
-- WarekiDate が eraYear/year の整数性を検証しない (NaN/小数が西暦経路で NaN jd になる)。
 - `VERSION` 定数と package.json version の一致テスト。
 - tsdown の `noExternal` 非推奨警告 (`deps.alwaysBundle` へ)。
 - parseToDate のフォールバック (`new Date(str)`) は UTC 深夜、和暦パースはローカル深夜になる差の README 追記。
