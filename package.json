@@ -47,7 +47,7 @@
     "build": "tsdown",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build && npm test && npm run smoke && npx publint && npx @arethetypeswrong/cli --pack .",
+    "prepublishOnly": "npm run build && npm test && npm run smoke && npx publint && npm_config_dry_run=false npx @arethetypeswrong/cli --pack .",
     "test:coverage": "vitest run --coverage",
     "smoke": "node test/smoke-runtime.mjs"
   },
