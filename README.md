@@ -1,6 +1,9 @@
 # ya-wareki
 
+[![npm version](https://img.shields.io/npm/v/ya-wareki.svg)](https://www.npmjs.com/package/ya-wareki)
 [![CI](https://github.com/sugi/ya-wareki-js/actions/workflows/ci.yml/badge.svg)](https://github.com/sugi/ya-wareki-js/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/ya-wareki.svg)](./LICENSE)
+[![node](https://img.shields.io/node/v/ya-wareki.svg)](https://www.npmjs.com/package/ya-wareki)
 
 和暦・旧暦を扱う JavaScript/TypeScript ライブラリです。Ruby gem [wareki](https://github.com/sugi/wareki) の移植版で、旧暦 (445年〜) を正確な月境界・閏月付きで変換できます。
 
