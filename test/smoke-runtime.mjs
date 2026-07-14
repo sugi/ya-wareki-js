@@ -24,7 +24,10 @@ check('ESM format', esm.format(new Date(2019, 4, 4)), '令和元年五月四日'
 const cjs = require('../dist/index.cjs')
 check('CJS parse+format', cjs.parse('平成7年11月10日').format('%Jf'), '平成07年11月10日')
 
-require('../dist/index.iife.min.js')
+// IIFE はブラウザ <script> 向けだが、type:module 配下では .js が ESM 扱いになり
+// require() は Node 18 で ERR_REQUIRE_ESM になる。import() なら全 Node で評価でき、
+// footer の globalThis.YaWareki 代入も実行される。
+await import('../dist/index.iife.min.js')
 check('IIFE global', globalThis.YaWareki.parse('天和三年閏五月四日').format(), '天和三年閏五月四日')
 
 if (failures.length > 0) {
