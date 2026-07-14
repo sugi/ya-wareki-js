@@ -1,10 +1,4 @@
 name: CI
-# ya-kansuji は npm 未公開のため、GitHub の sugi/ya-kansuji-js をチェックアウトして
-# ビルドし、ローカル依存としてインストールする。
-# ya-kansuji publish 後にやること:
-#   1. 各ジョブの「ya-kansuji from GitHub」ステップを削除し、npm install を素の
-#      `npm install` (または lockfile コミット後は `npm ci` + cache: 'npm') に戻す
-#   2. package-lock.json を .gitignore から外してコミットする
 on:
   push:
     branches: [master]
@@ -18,24 +12,11 @@ jobs:
         node-version: ['22', '24']
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/checkout@v7
-        with:
-          repository: sugi/ya-kansuji-js
-          path: .deps/ya-kansuji-js
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Build ya-kansuji from GitHub
-        run: |
-          cd .deps/ya-kansuji-js
-          npm ci
-          npm run build
-      - name: Install with local ya-kansuji
-        # npm install <dir> は package.json を file: 依存に書き換えるため、
-        # node_modules 構築後に元へ戻す (publint は package.json を検査する)
-        run: |
-          npm install ./.deps/ya-kansuji-js
-          git restore package.json
+          cache: 'npm'
+      - run: npm ci
       - run: npm run typecheck
       - run: npm run build
       - name: Test with coverage
@@ -59,22 +40,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: ['18']
+        node-version: ['18', '20']
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/checkout@v7
-        with:
-          repository: sugi/ya-kansuji-js
-          path: .deps/ya-kansuji-js
       - name: Set up build toolchain Node
         uses: actions/setup-node@v7
         with:
           node-version: '22'
-      - name: Build ya-kansuji + ya-wareki
+          cache: 'npm'
+      - name: Build
         run: |
-          (cd .deps/ya-kansuji-js && npm ci && npm run build)
-          npm install ./.deps/ya-kansuji-js
-          git restore package.json
+          npm ci
           npm run build
       - name: Switch to minimum supported runtime
         uses: actions/setup-node@v7
