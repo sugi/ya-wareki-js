@@ -3,6 +3,7 @@
 // (型定義は両者とも temporal-spec を re-export しており同一)。
 import { Temporal as TemporalPolyfill } from 'temporal-polyfill/full'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { UnsupportedDateRangeError, WarekiDate } from '../src/index.js'
 import {
   getTemporalNamespace,
   isTemporalDateLike,
@@ -132,5 +133,106 @@ describe('getTemporalNamespace', () => {
   it('returns the namespace when present', () => {
     vi.stubGlobal('Temporal', TemporalPolyfill)
     expect(getTemporalNamespace()).toBe(TemporalPolyfill)
+  })
+})
+
+describe.each(providers)('WarekiDate Temporal interop (%s)', (_name, T) => {
+  describe('fromTemporal', () => {
+    it('converts PlainDate (Gregorian era)', () => {
+      const w = WarekiDate.fromTemporal(T.PlainDate.from('2019-05-04'))
+      expect(w.eraName).toBe('令和')
+      expect(w.eraYear).toBe(1)
+      expect(w.month).toBe(5)
+      expect(w.day).toBe(4)
+    })
+
+    it('converts PlainDate (旧暦・閏月)', () => {
+      // README の既知ゴールデン: 1683-06-28 (グレゴリオ) = 天和三年閏五月四日
+      const w = WarekiDate.fromTemporal(T.PlainDate.from('1683-06-28'))
+      expect(w.format('%JF')).toBe('天和三年閏五月四日')
+      expect(w.isLeapMonth).toBe(true)
+    })
+
+    it('converts non-ISO calendar input via ISO fields', () => {
+      const jp = T.PlainDate.from('2019-05-04').withCalendar('japanese')
+      expect(WarekiDate.fromTemporal(jp).format('%JF')).toBe('令和元年五月四日')
+    })
+
+    it('converts PlainDateTime (日付部分のみ使用)', () => {
+      const w = WarekiDate.fromTemporal(T.PlainDateTime.from('1989-01-08T12:34:56'))
+      expect(w.eraName).toBe('平成')
+      expect(w.eraYear).toBe(1)
+    })
+
+    it('converts ZonedDateTime using its wall-clock date', () => {
+      // UTC 2019-04-30T20:00 = Asia/Tokyo 2019-05-01T05:00 → 改元当日 (令和元年)
+      const zdt = T.Instant.from('2019-04-30T20:00:00Z').toZonedDateTimeISO('Asia/Tokyo')
+      const w = WarekiDate.fromTemporal(zdt)
+      expect(w.eraName).toBe('令和')
+      expect(w.eraYear).toBe(1)
+      expect(w.month).toBe(5)
+      expect(w.day).toBe(1)
+    })
+
+    it('throws UnsupportedDateRangeError for dates before the era table (< 645)', () => {
+      expect(() => WarekiDate.fromTemporal(T.PlainDate.from('0400-01-01'))).toThrow(
+        UnsupportedDateRangeError,
+      )
+    })
+
+    it('throws TypeError for non-temporal values', () => {
+      // @ts-expect-error 実行時型チェックの検証
+      expect(() => WarekiDate.fromTemporal(new Date())).toThrow(TypeError)
+      // @ts-expect-error 実行時型チェックの検証
+      expect(() => WarekiDate.fromTemporal({})).toThrow(TypeError)
+      // @ts-expect-error 実行時型チェックの検証
+      expect(() => WarekiDate.fromTemporal(null)).toThrow(TypeError)
+    })
+  })
+
+  describe('toPlainDate', () => {
+    it('creates an ISO PlainDate via globalThis.Temporal', () => {
+      vi.stubGlobal('Temporal', T)
+      const pd = new WarekiDate('明治', 8, 2, 1).toPlainDate()
+      expect(String(pd)).toBe('1875-02-01')
+    })
+
+    it('matches toGregorianParts for pre-reform lunisolar dates', () => {
+      vi.stubGlobal('Temporal', T)
+      const w = WarekiDate.parse('天和3年閏5月4日')
+      const pd = w.toPlainDate()
+      const parts = w.toGregorianParts()
+      expect(String(pd)).toBe('1683-06-28')
+      expect({ year: pd.year, month: pd.month, day: pd.day }).toEqual(parts)
+    })
+
+    it('handles 紀元前 (negative/zero ISO years)', () => {
+      vi.stubGlobal('Temporal', T)
+      const w = new WarekiDate('紀元前', 1, 1, 1)
+      const pd = w.toPlainDate()
+      expect({ year: pd.year, month: pd.month, day: pd.day }).toEqual(w.toGregorianParts())
+      expect(pd.year).toBeLessThanOrEqual(0)
+    })
+
+    it('round-trips through fromTemporal', () => {
+      vi.stubGlobal('Temporal', T)
+      for (const s of ['令和元年五月四日', '天和三年閏五月四日', '明治五年十二月二日']) {
+        const w = WarekiDate.parse(s)
+        expect(WarekiDate.fromTemporal(w.toPlainDate()).isSameDay(w)).toBe(true)
+        expect(WarekiDate.fromTemporal(w.toPlainDate()).format('%JF')).toBe(s)
+      }
+    })
+
+    it('throws when globalThis.Temporal is missing', () => {
+      vi.stubGlobal('Temporal', undefined)
+      expect(() => new WarekiDate('令和', 1, 5, 4).toPlainDate()).toThrow(
+        /Temporal is not available/,
+      )
+    })
+
+    it('propagates RangeError for dates beyond the PlainDate range (±271821年)', () => {
+      vi.stubGlobal('Temporal', T)
+      expect(() => new WarekiDate('西暦', 300000, 1, 1).toPlainDate()).toThrow(RangeError)
+    })
   })
 })
