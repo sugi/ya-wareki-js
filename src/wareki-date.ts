@@ -4,6 +4,13 @@ import { findEraByJd } from './era-lookup.js'
 import { formatWareki } from './format.js'
 import { gregorianToJd, italyToJd, jdToGregorian, jdToJulian } from './jd.js'
 import { parseFields } from './parse.js'
+import {
+  getTemporalNamespace,
+  isTemporalDateLike,
+  type TemporalDateLike,
+  type TemporalPlainDate,
+  temporalToIsoParts,
+} from './temporal.js'
 import { eraYearToCivil, findDateParts, lastDayOfEraMonth } from './utils.js'
 import {
   yearDataIndex,
@@ -84,6 +91,24 @@ export class WarekiDate {
     const d = new WarekiDate(era.name, p.year - era.year + 1, p.month, p.day, p.isLeapMonth)
     d.#jd = jd
     return d
+  }
+
+  /**
+   * Temporal オブジェクト (`PlainDate` / `PlainDateTime` / `ZonedDateTime`) から
+   * {@link WarekiDate} を作る。非 ISO カレンダー (japanese 等) の値は
+   * `withCalendar('iso8601')` で ISO の年月日に揃えてから変換する。構造的に判定するため
+   * polyfill のインスタンスも受け付ける (グローバル `Temporal` は不要)。
+   * `ZonedDateTime` はそのタイムゾーンのウォールクロック年月日を使う。
+   * @throws {TypeError} Temporal の日付型と解釈できない値のとき
+   * @throws {UnsupportedDateRangeError} サポート範囲外の日付のとき
+   */
+  static fromTemporal(temporal: TemporalDateLike): WarekiDate {
+    if (!isTemporalDateLike(temporal))
+      throw new TypeError(
+        'WarekiDate.fromTemporal() expects a Temporal PlainDate / PlainDateTime / ZonedDateTime',
+      )
+    const { year, month, day } = temporalToIsoParts(temporal)
+    return WarekiDate.fromJd(gregorianToJd(year, month, day))
   }
 
   /**
@@ -201,6 +226,19 @@ export class WarekiDate {
     d.setFullYear(year, month - 1, day)
     d.setHours(0, 0, 0, 0)
     return d
+  }
+
+  /**
+   * ISO カレンダーの `Temporal.PlainDate` へ変換する。実行環境のグローバル `Temporal` を
+   * 使うため、未搭載ランタイム (Node 18〜24 など) ではエラーになる。polyfill 利用時は
+   * `Temporal.PlainDate.from(d.toGregorianParts())` を使うか、polyfill をグローバル登録
+   * すること。
+   * @throws {Error} グローバル `Temporal` が存在しないとき
+   */
+  toPlainDate(): TemporalPlainDate {
+    const ns = getTemporalNamespace()
+    const { year, month, day } = this.toGregorianParts()
+    return new ns.PlainDate(year, month, day) as TemporalPlainDate
   }
 
   /** 元号・年・月・日・閏月がすべて一致するか (暦表現としての同一性)。 */

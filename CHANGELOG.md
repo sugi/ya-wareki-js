@@ -4,6 +4,22 @@
 書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/)、
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
+## [0.2.0] - 2026-07-17
+
+### Added
+
+- Temporal 相互変換: `WarekiDate.fromTemporal()` / `WarekiDate#toPlainDate()` を追加。
+  `toWarekiDate()` と `format()` も Temporal の `PlainDate` / `PlainDateTime` /
+  `ZonedDateTime` を受け付けるようになった (時刻を持つ型では `%JT` 系も展開)。
+- 型 `TemporalDateLike` / `TemporalPlainDate` を export。利用側で `esnext.temporal` lib が
+  有効なら `toPlainDate()` の戻り値は `Temporal.PlainDate` に昇格する。
+
+### Changed
+
+- `format()` / `toWarekiDate()` に Date・WarekiDate・Temporal のいずれでもない値を渡した
+  ときのエラーが `RangeError` から `TypeError` になった (Invalid Date は従来どおり
+  `RangeError`)。
+
 ## [0.1.0] - 2026-07-15
 
 初回リリース。
@@ -29,4 +45,5 @@
 - 紀元前 (負の西暦年) の漢数字系フォーマット・ゲッターは、ya-kansuji の制約により `RangeError` を投げる。
 - その他の Ruby 版との既知挙動差は [README「既知の挙動差」](README.md#既知の挙動差) を参照。
 
+[0.2.0]: https://github.com/sugi/ya-wareki-js/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sugi/ya-wareki-js/releases/tag/v0.1.0

@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
+    "lib": ["ES2022", "ESNext.Temporal"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
@@ -14,5 +15,8 @@
     "test",
     "tsdown.config.ts",
     "vitest.config.ts"
+  ],
+  "exclude": [
+    "test/types"
   ]
 }

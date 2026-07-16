@@ -1,6 +1,7 @@
 import { GREGORIAN_START_JD } from './constants.js'
 import { UnsupportedDateRangeError, WarekiInvalidDateError, WarekiParseError } from './errors.js'
-import { hasJDateDirective, stdStrftimeFromDate } from './format.js'
+import { hasJDateDirective, stdStrftimeFromDate, stdStrftimeFromParts } from './format.js'
+import { isTemporalDateLike, type TemporalDateLike, temporalTimeParts, temporalToIsoParts } from './temporal.js'
 import { formatTime, normalizeTime, TIME_QUICK_FILTER } from './time.js'
 import { WarekiDate } from './wareki-date.js'
 
@@ -8,6 +9,7 @@ export { WarekiDate } from './wareki-date.js'
 export { UnsupportedDateRangeError, WarekiInvalidDateError, WarekiParseError } from './errors.js'
 export { formatTime, normalizeTime } from './time.js'
 export type { TimeParts } from './time.js'
+export type { TemporalDateLike, TemporalPlainDate } from './temporal.js'
 
 /**
  * 明治の改暦日 (明治6年1月1日 = グレゴリオ暦1873年1月1日) のユリウス日。
@@ -16,7 +18,7 @@ export type { TimeParts } from './time.js'
 export const GREGORIAN_REFORM_JD: number = GREGORIAN_START_JD
 
 /** このライブラリのバージョン (`package.json` の `version` と一致)。 */
-export const VERSION = '0.1.0'
+export const VERSION = '0.2.0'
 
 /**
  * 和暦文字列をパースして {@link WarekiDate} を返す。時刻表記が続く場合は無視して
@@ -104,45 +106,62 @@ export function parseToDate(str: string): Date {
 }
 
 /**
- * `Date` を {@link WarekiDate} へ変換する。既定はローカルタイムゾーンの年月日
- * ({@link WarekiDate.fromDate} を呼ぶ)。
+ * `Date` または Temporal オブジェクト (`PlainDate` / `PlainDateTime` / `ZonedDateTime`) を
+ * {@link WarekiDate} へ変換する。`Date` はローカルタイムゾーンの年月日
+ * ({@link WarekiDate.fromDate})、Temporal は ISO の年月日 ({@link WarekiDate.fromTemporal})
+ * を使う。
  *
- * @param date 変換対象の `Date`
+ * @param date 変換対象の `Date` または Temporal オブジェクト
  * @returns 対応する {@link WarekiDate}
- * @throws {RangeError} 無効な Date (Invalid Date) を渡したとき ({@link WarekiDate.fromDate} 経由)
+ * @throws {RangeError} 無効な Date (Invalid Date) を渡したとき
+ * @throws {TypeError} Date でも Temporal の日付型でもない値を渡したとき
  * @example
- * toWarekiDate(new Date(1683, 5, 28)).format('%JF') // => '天和三年閏五月四日'
+ * toWarekiDate(new Date(1683, 5, 28)).format('%JF')                  // => '天和三年閏五月四日'
+ * toWarekiDate(Temporal.PlainDate.from('1683-06-28')).format('%JF')  // => '天和三年閏五月四日'
  */
-export function toWarekiDate(date: Date): WarekiDate {
-  return WarekiDate.fromDate(date)
+export function toWarekiDate(date: Date | TemporalDateLike): WarekiDate {
+  if (date instanceof Date) return WarekiDate.fromDate(date)
+  if (!isTemporalDateLike(date))
+    throw new TypeError('toWarekiDate() expects a Date or a Temporal date object')
+  return WarekiDate.fromTemporal(date)
 }
 
 /**
- * `Date` または {@link WarekiDate} をフォーマット文字列に従って文字列化する。既定は
- * `'%JF'` (例: `令和元年五月四日`)。使用できる `%J` / `%JT` コードは README
+ * `Date`・{@link WarekiDate}・Temporal オブジェクトをフォーマット文字列に従って文字列化
+ * する。既定は `'%JF'` (例: `令和元年五月四日`)。使用できる `%J` / `%JT` コードは README
  * 「フォーマット文字列一覧」を参照。
  *
- * `Date` を渡した場合はまず `%JT` 時刻ディレクティブをローカル時刻から展開し、続けて
- * `%J` 日付ディレクティブを展開する。{@link WarekiDate} を渡した場合は時刻情報が無い
+ * `Date` はローカル時刻、`PlainDateTime` / `ZonedDateTime` はそのウォールクロック時刻から
+ * `%JT` 時刻ディレクティブを展開する。{@link WarekiDate} と `PlainDate` は時刻情報が無い
  * ため `%JT` はリテラルのまま残る。
  *
- * @param date `Date` または {@link WarekiDate}
+ * @param date `Date`・{@link WarekiDate}・Temporal の日付オブジェクト
  * @param fmt フォーマット文字列 (既定 `'%JF'`)
  * @returns フォーマット済み文字列
  * @throws {RangeError} 無効な Date (Invalid Date) を渡したとき
+ * @throws {TypeError} 対応しない型の値を渡したとき
  * @example
- * format(new Date(2019, 4, 4))        // => '令和元年五月四日'
- * format(new Date(2019, 4, 4), '%Jf') // => '令和01年05月04日'
+ * format(new Date(2019, 4, 4))                          // => '令和元年五月四日'
+ * format(Temporal.PlainDate.from('2019-05-04'), '%Jf')  // => '令和01年05月04日'
  */
-export function format(date: Date | WarekiDate, fmt = '%JF'): string {
+export function format(date: Date | WarekiDate | TemporalDateLike, fmt = '%JF'): string {
   if (date instanceof WarekiDate) return date.format(fmt)
-  // 型は Date だが JS 呼び出し元は非 Date を渡し得るので、instanceof も含めて一律 RangeError にする。
-  if (!(date instanceof Date) || Number.isNaN(date.getTime()))
-    throw new RangeError('format() received an invalid Date')
-  const timeExpanded = formatTime(date, fmt)
-  // Ruby: wareki_directive?(FORMAT_EXPANSION_REGEX) が実際の %J 日付ディレクティブの
-  // 有無を見て to_wareki_date を呼ぶか決める (単に '%' が残っているかではない)。
-  // 暦対象外の年でも、実ディレクティブが無ければ era 変換を経由しない。
-  if (!hasJDateDirective(timeExpanded)) return stdStrftimeFromDate(date, timeExpanded)
-  return WarekiDate.fromDate(date).format(timeExpanded)
+  if (date instanceof Date) {
+    if (Number.isNaN(date.getTime())) throw new RangeError('format() received an invalid Date')
+    const timeExpanded = formatTime(date, fmt)
+    // Ruby: wareki_directive?(FORMAT_EXPANSION_REGEX) が実際の %J 日付ディレクティブの
+    // 有無を見て to_wareki_date を呼ぶか決める (単に '%' が残っているかではない)。
+    // 暦対象外の年でも、実ディレクティブが無ければ era 変換を経由しない。
+    if (!hasJDateDirective(timeExpanded)) return stdStrftimeFromDate(date, timeExpanded)
+    return WarekiDate.fromDate(date).format(timeExpanded)
+  }
+  if (!isTemporalDateLike(date))
+    throw new TypeError('format() expects a Date, WarekiDate, or Temporal date object')
+  const time = temporalTimeParts(date)
+  const timeExpanded = time ? formatTime(time, fmt) : fmt
+  if (!hasJDateDirective(timeExpanded)) {
+    const { year, month, day } = temporalToIsoParts(date)
+    return stdStrftimeFromParts(year, month, day, timeExpanded)
+  }
+  return WarekiDate.fromTemporal(date).format(timeExpanded)
 }

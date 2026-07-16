@@ -4,7 +4,7 @@ import { VERSION } from '../src/index.js'
 
 describe('package', () => {
   it('has a version number', () => {
-    expect(VERSION).toBe('0.1.0')
+    expect(VERSION).toBe('0.2.0')
   })
 
   it('resolves the local ya-kansuji dependency', () => {

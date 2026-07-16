@@ -28,7 +28,7 @@ describe('top-level API', () => {
 
   it('exposes constants', () => {
     expect(GREGORIAN_REFORM_JD).toBe(2405160)
-    expect(VERSION).toBe('0.1.0')
+    expect(VERSION).toBe('0.2.0')
   })
 })
 
