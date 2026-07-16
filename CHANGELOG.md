@@ -4,7 +4,7 @@
 書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/)、
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
-## [0.2.0] - Unreleased
+## [0.2.0] - 2026-07-17
 
 ### Added
 
@@ -45,5 +45,5 @@
 - 紀元前 (負の西暦年) の漢数字系フォーマット・ゲッターは、ya-kansuji の制約により `RangeError` を投げる。
 - その他の Ruby 版との既知挙動差は [README「既知の挙動差」](README.md#既知の挙動差) を参照。
 
-[0.2.0]: https://github.com/sugi/ya-wareki-js/compare/v0.1.0...HEAD
+[0.2.0]: https://github.com/sugi/ya-wareki-js/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sugi/ya-wareki-js/releases/tag/v0.1.0
