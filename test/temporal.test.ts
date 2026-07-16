@@ -316,5 +316,7 @@ describe('format / toWarekiDate rejects non-supported values', () => {
   it('toWarekiDate throws TypeError for plain objects', () => {
     // @ts-expect-error 実行時型チェックの検証
     expect(() => toWarekiDate({})).toThrow(TypeError)
+    // @ts-expect-error 実行時型チェックの検証
+    expect(() => toWarekiDate({})).toThrow(/toWarekiDate\(\) expects/)
   })
 })

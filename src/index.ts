@@ -121,6 +121,8 @@ export function parseToDate(str: string): Date {
  */
 export function toWarekiDate(date: Date | TemporalDateLike): WarekiDate {
   if (date instanceof Date) return WarekiDate.fromDate(date)
+  if (!isTemporalDateLike(date))
+    throw new TypeError('toWarekiDate() expects a Date or a Temporal date object')
   return WarekiDate.fromTemporal(date)
 }
 
