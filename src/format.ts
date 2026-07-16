@@ -141,18 +141,19 @@ function stdStrftime(d: WarekiDate, str: string): string {
   return stdStrftimeCore(parts.year, parts.month, parts.day, dayOfYear, str)
 }
 
-// %J 日付ディレクティブが実在しない Date 入力向けの経路 (index.ts の format() から
-// 呼ばれる)。Ruby の Time#strftime はネイティブ実装にそのまま委譲するだけで改暦・
-// ユリウス暦補正を経由しないため、WarekiDate/jd 変換を挟まずローカルの年月日を
+// %J 日付ディレクティブが実在しない Date / Temporal 入力向けの経路 (index.ts の
+// format() から呼ばれる)。Ruby の Time#strftime はネイティブ実装にそのまま委譲するだけで
+// 改暦・ユリウス暦補正を経由しないため、WarekiDate/jd 変換を挟まず与えられた年月日を
 // そのまま使う (改暦以前の年でも UnsupportedDateRangeError を投げない)。
-export function stdStrftimeFromDate(date: Date, str: string): string {
-  const year = date.getFullYear()
-  const month = date.getMonth() + 1
-  const day = date.getDate()
+export function stdStrftimeFromParts(year: number, month: number, day: number, str: string): string {
   // 先発グレゴリオ暦上の通日。多引数 Date.UTC は 0〜99 年を 1900 年代へ写すため
   // (西暦0年は閏年だが 1900 は平年)、JD 差で計算して 0〜99 年とタイムゾーンの影響を避ける。
   const dayOfYear = gregorianToJd(year, month, day) - gregorianToJd(year, 1, 1) + 1
   return stdStrftimeCore(year, month, day, dayOfYear, str)
+}
+
+export function stdStrftimeFromDate(date: Date, str: string): string {
+  return stdStrftimeFromParts(date.getFullYear(), date.getMonth() + 1, date.getDate(), str)
 }
 
 export function formatWareki(d: WarekiDate, fmt: string): string {

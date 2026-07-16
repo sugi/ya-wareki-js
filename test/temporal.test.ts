@@ -3,7 +3,7 @@
 // (型定義は両者とも temporal-spec を re-export しており同一)。
 import { Temporal as TemporalPolyfill } from 'temporal-polyfill/full'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { UnsupportedDateRangeError, WarekiDate } from '../src/index.js'
+import { UnsupportedDateRangeError, WarekiDate, format, toWarekiDate } from '../src/index.js'
 import {
   getTemporalNamespace,
   isTemporalDateLike,
@@ -234,5 +234,69 @@ describe.each(providers)('WarekiDate Temporal interop (%s)', (_name, T) => {
       vi.stubGlobal('Temporal', T)
       expect(() => new WarekiDate('西暦', 300000, 1, 1).toPlainDate()).toThrow(RangeError)
     })
+  })
+})
+
+describe.each(providers)('top-level API Temporal interop (%s)', (_name, T) => {
+  describe('toWarekiDate', () => {
+    it('accepts Temporal objects', () => {
+      expect(toWarekiDate(T.PlainDate.from('2019-05-04')).format('%JF')).toBe('令和元年五月四日')
+    })
+
+    it('still accepts Date', () => {
+      expect(toWarekiDate(new Date(2019, 4, 4)).format('%JF')).toBe('令和元年五月四日')
+    })
+  })
+
+  describe('format', () => {
+    it('formats PlainDate with default and explicit formats', () => {
+      expect(format(T.PlainDate.from('2019-05-04'))).toBe('令和元年五月四日')
+      expect(format(T.PlainDate.from('2019-05-04'), '%Jf')).toBe('令和01年05月04日')
+    })
+
+    it('expands %JT time directives from PlainDateTime', () => {
+      expect(format(T.PlainDateTime.from('1989-01-08T12:34:56'), '%Jf %JTHk時%JTMk分')).toBe(
+        '平成01年01月08日 十二時三十四分',
+      )
+    })
+
+    it('expands %JT time directives from ZonedDateTime wall-clock', () => {
+      const zdt = T.Instant.from('2019-04-30T20:00:00Z').toZonedDateTimeISO('Asia/Tokyo')
+      expect(format(zdt, '%JF %JTHk時')).toBe('令和元年五月一日 五時')
+    })
+
+    it('leaves %JT literal for PlainDate (時刻を持たない)', () => {
+      expect(format(T.PlainDate.from('2019-05-04'), '%JTHk時')).toBe('%JTHk時')
+    })
+
+    it('skips era conversion when no %J date directive is present', () => {
+      // era テーブル外 (645 年より前) でも std ディレクティブだけなら変換を経由せず成功する
+      expect(format(T.PlainDate.from('0400-01-02'), '%F')).toBe('0400-01-02')
+      expect(format(T.PlainDate.from('0400-01-02'), '%Y-%m-%d')).toBe('0400-01-02')
+    })
+
+    it('throws UnsupportedDateRangeError when %J directive needs an era out of range', () => {
+      expect(() => format(T.PlainDate.from('0400-01-02'), '%JF')).toThrow(
+        UnsupportedDateRangeError,
+      )
+    })
+  })
+})
+
+describe('format / toWarekiDate rejects non-supported values', () => {
+  it('format throws TypeError (旧: RangeError) for plain objects', () => {
+    // @ts-expect-error 実行時型チェックの検証
+    expect(() => format({})).toThrow(TypeError)
+    // @ts-expect-error 実行時型チェックの検証
+    expect(() => format(42)).toThrow(TypeError)
+  })
+
+  it('format still throws RangeError for invalid Date', () => {
+    expect(() => format(new Date(Number.NaN))).toThrow(RangeError)
+  })
+
+  it('toWarekiDate throws TypeError for plain objects', () => {
+    // @ts-expect-error 実行時型チェックの検証
+    expect(() => toWarekiDate({})).toThrow(TypeError)
   })
 })
