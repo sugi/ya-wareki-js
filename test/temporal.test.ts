@@ -121,6 +121,24 @@ describe('temporalToIsoParts (broken input)', () => {
     }
     expect(() => temporalToIsoParts(broken)).toThrow(TypeError)
   })
+
+  it('throws TypeError for non-existent ISO dates from duck-typed objects', () => {
+    const duck = (year: number, month: number, day: number): TemporalDateLike => ({
+      calendarId: 'iso8601',
+      year,
+      month,
+      day,
+      withCalendar() {
+        return this
+      },
+    })
+    expect(() => temporalToIsoParts(duck(2019, 13, 1))).toThrow(TypeError)
+    expect(() => temporalToIsoParts(duck(2019, 2, 30))).toThrow(TypeError)
+    expect(() => temporalToIsoParts(duck(2019, 0, 1))).toThrow(TypeError)
+    expect(() => temporalToIsoParts(duck(2019, 1, 0))).toThrow(TypeError)
+    // 正常系は通ることも確認 (閏日)
+    expect(temporalToIsoParts(duck(2020, 2, 29))).toEqual({ year: 2020, month: 2, day: 29 })
+  })
 })
 
 describe('getTemporalNamespace', () => {

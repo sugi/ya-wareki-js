@@ -1,3 +1,4 @@
+import { gregorianToJd, jdToGregorian } from './jd.js'
 import type { TimeParts } from './time.js'
 
 /**
@@ -45,6 +46,11 @@ export function temporalToIsoParts(t: TemporalDateLike): {
   const { year, month, day } = iso
   if (!Number.isSafeInteger(year) || !Number.isSafeInteger(month) || !Number.isSafeInteger(day))
     throw new TypeError(`invalid Temporal object: non-integer ISO date fields (${year}-${month}-${day})`)
+  // 存在しない日付 (13月・2月30日など) は gregorianToJd が黙って別の日付に正規化して
+  // しまうため、往復変換の一致で実在する ISO 日付であることを確認する。
+  const rt = jdToGregorian(gregorianToJd(year, month, day))
+  if (rt.year !== year || rt.month !== month || rt.day !== day)
+    throw new TypeError(`invalid Temporal object: no such ISO date (${year}-${month}-${day})`)
   return { year, month, day }
 }
 
