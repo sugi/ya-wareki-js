@@ -47,7 +47,8 @@
     "build": "tsdown",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build && npm test && npm run smoke && npx publint && npm_config_dry_run=false npx @arethetypeswrong/cli --pack .",
+    "test:types": "tsc -p test/types/tsconfig.with-lib.json && tsc -p test/types/tsconfig.no-lib.json",
+    "prepublishOnly": "npm run build && npm test && npm run test:types && npm run smoke && npx publint && npm_config_dry_run=false npx @arethetypeswrong/cli --pack .",
     "test:coverage": "vitest run --coverage",
     "smoke": "node test/smoke-runtime.mjs"
   },

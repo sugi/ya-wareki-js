@@ -15,5 +15,8 @@
     "test",
     "tsdown.config.ts",
     "vitest.config.ts"
+  ],
+  "exclude": [
+    "test/types"
   ]
 }
