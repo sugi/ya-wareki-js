@@ -28,6 +28,15 @@ describe.skipIf(!existsSync('dist/index.cjs'))('dist artifacts', () => {
     expect(out).toBe('天和三年閏五月四日 undefined') // ya-kansuji は内包されるがグローバルには出さない
   })
 
+  it('does not leak lib references into the type declarations', () => {
+    // no-lib 型テスト (test/types) では triple-slash reference の混入を検出できない
+    // (reference は消費側 tsconfig の lib 設定と無関係に取り込まれる) ため、ここで直接検査する。
+    const dts = readFileSync('dist/index.d.ts', 'utf8')
+    const dcts = readFileSync('dist/index.d.cts', 'utf8')
+    expect(dts).not.toContain('/// <reference lib')
+    expect(dcts).not.toContain('/// <reference lib')
+  })
+
   it('keeps ya-kansuji external in ESM/CJS but inlined in IIFE', () => {
     const esm = readFileSync('dist/index.js', 'utf8')
     const cjs = readFileSync('dist/index.cjs', 'utf8')
