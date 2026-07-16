@@ -18,7 +18,7 @@ export type { TemporalDateLike, TemporalPlainDate } from './temporal.js'
 export const GREGORIAN_REFORM_JD: number = GREGORIAN_START_JD
 
 /** このライブラリのバージョン (`package.json` の `version` と一致)。 */
-export const VERSION = '0.1.0'
+export const VERSION = '0.2.0'
 
 /**
  * 和暦文字列をパースして {@link WarekiDate} を返す。時刻表記が続く場合は無視して

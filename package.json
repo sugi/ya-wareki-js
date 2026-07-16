@@ -1,6 +1,6 @@
 {
   "name": "ya-wareki",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Yet another Japanese calendar (wareki) library — parses and formats Japanese era dates including the pre-1873 lunisolar calendar",
   "keywords": [
     "wareki",
