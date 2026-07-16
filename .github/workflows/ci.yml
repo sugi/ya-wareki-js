@@ -20,6 +20,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm run test:types
+      - run: npm run smoke
       - name: Test with coverage
         run: |
           npm run test:coverage | tee /tmp/vitest-coverage.out
