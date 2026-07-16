@@ -9,6 +9,7 @@
 * 和暦文字列のパース (元号・漢数字・旧字体・㍾㍽㍼㍻㋿・閏月・月の別名・朔/晦/元旦などの慣用表記に対応)
 * 旧暦 (445年1月1日〜明治5年12月2日) と グレゴリオ暦 (明治6年〜) の相互変換
 * 神武天皇即位紀元 (皇紀)、西暦、紀元前の解釈
+* Temporal (`PlainDate` / `PlainDateTime` / `ZonedDateTime`) との相互変換 (入力は polyfill のインスタンスも可)
 * 日本語の時刻表記 (漢数字・全角数字の時分秒、午前/午後、半、正午) のパースと `%JT` 系フォーマット文字列
 * Ruby 版と完全互換の `%J` 系フォーマット文字列
 * テンプレートリテラル向けのフィールドゲッター (`eraYearKanji` など)
@@ -66,6 +67,30 @@ const t = parse('天和3年閏5月4日')
 `${t.eraName}${t.eraYearKanji}年${t.leapMonthMark}${t.monthKanji}月${t.dayKanji}日`
 // => '天和三年閏五月四日'
 ```
+
+## Temporal との相互変換
+
+[Temporal](https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/Temporal) (ES2026) の日付型とも相互変換できます。
+
+```ts
+import { WarekiDate, toWarekiDate, format } from 'ya-wareki'
+
+// Temporal → WarekiDate (PlainDate / PlainDateTime / ZonedDateTime を受け付け)
+WarekiDate.fromTemporal(Temporal.PlainDate.from('1683-06-28')).format('%JF')
+// => '天和三年閏五月四日'
+toWarekiDate(Temporal.Now.plainDateISO()).format()      // 今日の和暦
+format(Temporal.PlainDate.from('2019-05-04'))           // => '令和元年五月四日'
+format(Temporal.PlainDateTime.from('1989-01-08T12:34:56'), '%Jf %JTHk時%JTMk分')
+// => '平成01年01月08日 十二時三十四分'
+
+// WarekiDate → Temporal.PlainDate (ISO カレンダー)
+WarekiDate.parse('明治8年2月1日').toPlainDate().toString() // => '1875-02-01'
+```
+
+* **入力側** (`fromTemporal` / `toWarekiDate` / `format`) は渡されたオブジェクトを直接読むため、グローバル `Temporal` が無い環境でも polyfill ([temporal-polyfill](https://www.npmjs.com/package/temporal-polyfill) など) のインスタンスをそのまま渡せます。`'japanese'` など非 ISO カレンダーの値も `withCalendar('iso8601')` 経由で正しく変換されます。
+* **出力側** (`toPlainDate()`) は実行環境のグローバル `Temporal` を使います (Node.js 26+、Firefox 139+、Chrome/Edge 144+)。未搭載環境で polyfill を使う場合は `Temporal.PlainDate.from(d.toGregorianParts())` としてください。
+* `ZonedDateTime` はそのタイムゾーンのウォールクロック年月日・時刻で解釈されます (`Date` のローカル時刻と同じ考え方)。
+* Temporal の `'japanese'` カレンダーは明治以降のグレゴリオ暦ベースなので、明治5年以前の旧暦 (太陰太陽暦) の月日はこのライブラリでのみ正しく扱えます。
 
 ## フォーマット文字列一覧
 
