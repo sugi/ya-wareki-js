@@ -53,7 +53,7 @@
     "smoke": "node test/smoke-runtime.mjs"
   },
   "dependencies": {
-    "ya-kansuji": "^0.1.0"
+    "ya-kansuji": "^1.0.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
